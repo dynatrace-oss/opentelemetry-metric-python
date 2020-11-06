@@ -97,11 +97,11 @@ class DynatraceMetricsExporter(MetricsExporter):
             return self._write_delta_value
         if isinstance(aggregator, aggregate.MinMaxSumCountAggregator):
             return self._write_summary_value
+        if isinstance(aggregator, aggregate.ValueObserverAggregator):
+            return self._write_summary_value
         if isinstance(aggregator, aggregate.LastValueAggregator):
             return None  # Not supported
         if isinstance(aggregator, aggregate.HistogramAggregator):
-            return None  # Not supported
-        if isinstance(aggregator, aggregate.ValueObserverAggregator):
             return None  # Not supported
         return None
 
