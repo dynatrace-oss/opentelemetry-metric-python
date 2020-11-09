@@ -7,10 +7,8 @@ from opentelemetry.sdk.metrics import MeterProvider
 metrics.set_meter_provider(MeterProvider())
 meter = metrics.get_meter(__name__)
 
-
 endpoint_url = None
 api_token = None
-
 exporter = DynatraceMetricsExporter(endpoint_url, api_token)
 
 # start_pipeline will notify the MeterProvider to begin collecting/exporting
