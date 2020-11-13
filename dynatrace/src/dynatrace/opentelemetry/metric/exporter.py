@@ -37,8 +37,7 @@ class DynatraceMetricsExporter(MetricsExporter):
         tags: Optional[Mapping[str, str]] = None,
     ):
         self._endpoint_url = endpoint_url
-        self._prefix = prefix
-        self._tags = tags or {}
+        self._serializer = serializer.DynatraceMetricsSerializer(prefix, tags)
         self._session = requests.Session()
         self._headers = {
             "Accept": "*/*; q=0",
@@ -50,9 +49,7 @@ class DynatraceMetricsExporter(MetricsExporter):
     def export(
         self, metric_records: Sequence[MetricRecord]
     ) -> MetricsExportResult:
-        serialized_records = serializer.serialize_records(
-            metric_records, self._prefix, self._tags
-        )
+        serialized_records = self._serializer.serialize_records(metric_records)
         if not serialized_records:
             return MetricsExportResult.SUCCESS
 
@@ -65,4 +62,5 @@ class DynatraceMetricsExporter(MetricsExporter):
                 resp.raise_for_status()
         except Exception as ex:
             logger.warning("Failed to export metrics: %s", ex)
+            return MetricsExportResult.FAILURE
         return MetricsExportResult.SUCCESS
