@@ -14,6 +14,8 @@
 
 from typing import Callable, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+import re
+
 from opentelemetry.metrics import get_meter_provider
 from opentelemetry.sdk.metrics.export import aggregate, MetricRecord
 
@@ -57,7 +59,10 @@ class DynatraceMetricsSerializer:
         if serialize_func is None:
             return
 
-        self._write_metric_key(string_buffer, record)
+        metric_key = self._get_metric_key(record)
+        if metric_key == "":
+            return
+        string_buffer.append(metric_key)
         self._write_dimensions(string_buffer, record.labels)
         if self._tags:
             self._write_dimensions(string_buffer, self._tags.items())
@@ -114,15 +119,36 @@ class DynatraceMetricsSerializer:
         string_buffer.append(",count=")
         string_buffer.append(str(checkpoint.count))
 
-    def _write_metric_key(
+    def _get_metric_key(
         self,
-        string_buffer: List[str],
         record: MetricRecord,
-    ):
+    ) -> str:
         metric_key = record.instrument.name
         if self._prefix:
             metric_key = self._prefix + "." + metric_key
-        string_buffer.append(metric_key)
+        return DynatraceMetricsSerializer._normalize_metric_key(metric_key)
+
+    @staticmethod
+    def _normalize_metric_key(key: str) -> str:
+        first, *rest = key.split(".")
+
+        first = DynatraceMetricsSerializer._normalize_metric_key_first_section(
+            first)
+
+        if first == "":
+            return ""
+
+        return ".".join([x for x in [first] + [DynatraceMetricsSerializer._normalize_metric_key_section(section) for section in rest] if x != ""])
+
+    @staticmethod
+    def _normalize_metric_key_first_section(section: str) -> str:
+        return DynatraceMetricsSerializer._normalize_metric_key_section(re.sub("^[^a-zA-Z]+", "", section))
+
+    @staticmethod
+    def _normalize_metric_key_section(section: str) -> str:
+        section = re.sub("^[^a-zA-Z0-9]+", "", section)
+        section = re.sub("[^a-zA-Z0-9_-]+", "_", section)
+        return section
 
     @staticmethod
     def _write_dimensions(
