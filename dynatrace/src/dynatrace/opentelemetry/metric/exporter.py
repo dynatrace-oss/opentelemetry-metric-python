@@ -56,8 +56,8 @@ class DynatraceMetricsExporter(MetricsExporter):
         try:
             with self._session.post(
                 self._endpoint_url,
-                data= serialized_records,
-                headers=self._headers,
+                data = serialized_records,
+                headers = self._headers,
             ) as resp:
                 resp.raise_for_status()
         except Exception as ex:
