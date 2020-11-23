@@ -154,6 +154,56 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
             "my.instr,l1=v1,l2=v2,t1=tv1,t2=tv2 count,10 111\n", result
         )
 
+    def test_invalid_name(self):
+        metric = DummyMetric(".")
+        aggregator = aggregate.SumAggregator()
+        record = MetricRecord(
+            metric, self._labels, aggregator, Resource({})
+        )
+
+        self._serializer = serializer.DynatraceMetricsSerializer(None, None)
+
+        self._update_value(aggregator, 10, time_stamp_ms=111)
+
+        result = self._serializer.serialize_records([record])
+
+        self.assertEqual(
+            "", result
+        )
+
+    def test_normalize_metric_key(self):
+        cases = [
+            ["basecase", "basecase"],
+            ["prefix.case", "prefix.case"],
+            ["", ""],
+            ["0", ""],
+            ["0.section", ""],
+            ["just.a.normal.key", "just.a.normal.key"],
+			["Case", "Case"],
+			["~0something", "something"],
+			["some~thing", "some_thing"],
+			["some~ä#thing", "some_thing"],
+			["a..b", "a.b"],
+			["a.....b", "a.b"],
+			["asd", "asd"],
+			[".", ""],
+			[".a", ""],
+			["a.", "a"],
+			[".a.", ""],
+			["_a", "a"],
+			["a_", "a_"],
+			["_a_", "a_"],
+			[".a_", ""],
+			["_a.", "a"],
+			["._._a_._._", ""],
+			["test..empty.test", "test.empty.test"],
+			["a,,,b  c=d\\e\\ =,f", "a_b_c_d_e_f"],
+			["a!b\"c#d$e%f&g'h(i)j*k+l,m-n.o/p:q;r<s=t>u?v@w[x]y\\z^0 1_2;3{4|5}6~7", "a_b_c_d_e_f_g_h_i_j_k_l_m-n.o_p_q_r_s_t_u_v_w_x_y_z_0_1_2_3_4_5_6_7"],
+        ]
+        for case in cases:
+            self.assertEqual(
+                serializer.DynatraceMetricsSerializer._normalize_metric_key(case[0]), case[1])
+
 
 class DummyMetric:
     def __init__(self, name: str):
