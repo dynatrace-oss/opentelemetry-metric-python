@@ -14,7 +14,7 @@
 
 import time
 
-from dynatrace.opentelemetry.metric.exporter import DynatraceMetricsExporter
+from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
 

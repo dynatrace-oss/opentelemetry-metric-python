@@ -107,7 +107,8 @@ class DynatraceMetricsSerializer:
 
     @staticmethod
     def _write_gauge_value(
-        string_buffer: List[str], aggregator: aggregate.MinMaxSumCountAggregator
+        string_buffer: List[str],
+        aggregator: aggregate.MinMaxSumCountAggregator,
     ):
         checkpoint = aggregator.checkpoint
         string_buffer.append(" gauge,min=")
@@ -133,16 +134,24 @@ class DynatraceMetricsSerializer:
         first, *rest = key.split(".")
 
         first = DynatraceMetricsSerializer._normalize_metric_key_first_section(
-            first)
+            first
+        )
 
         if first == "":
             return ""
 
-        return ".".join([x for x in [first] + [DynatraceMetricsSerializer._normalize_metric_key_section(section) for section in rest] if x != ""])
+        rest = list(filter(None, map(
+            DynatraceMetricsSerializer._normalize_metric_key_section,
+            rest,
+        )))
+
+        return ".".join([x for x in [first] + rest if x != ""])
 
     @staticmethod
     def _normalize_metric_key_first_section(section: str) -> str:
-        return DynatraceMetricsSerializer._normalize_metric_key_section(re.sub("^[^a-zA-Z]+", "", section))
+        return DynatraceMetricsSerializer._normalize_metric_key_section(
+            re.sub("^[^a-zA-Z]+", "", section),
+        )
 
     @staticmethod
     def _normalize_metric_key_section(section: str) -> str:

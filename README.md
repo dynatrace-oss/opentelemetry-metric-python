@@ -56,7 +56,7 @@ The Dynatrace API token to be used by the exporter is specified using the `api_t
 Creating an API token for your Dynatrace environment is described in the [Dynatrace API documentation](https://www.dynatrace.com/support/help/dynatrace-api/basics/dynatrace-api-authentication/).
 The scope required for sending metrics is the `Ingest metrics` scope in the **API v2** section:
 
-![API token creation](docs/img/api_token.png)
+![API token creation](https://raw.githubusercontent.com/dynatrace-oss/opentelemetry-metric-python/main/docs/img/api_token.png)
 
 #### Metric Key Prefix
 
@@ -65,3 +65,17 @@ The `prefix` parameter specifies an optional prefix, which is prepended to each 
 #### Default Labels/Dimensions
 
 The `tags` parameter can be used to optionally specify a list of key/value pairs, which will be added as additional labels/dimensions to all data points.
+
+## Development
+
+### Requirements
+
+Just [`tox`](https://pypi.org/project/tox/)
+
+### Running tests and lint
+
+*Test all supported python versions:* `tox`
+*Test all supported python versions in parallel:* `tox -p`
+*A particular python version:* `tox -e 38`
+*Current python version*: `tox -e py`
+*Lint*: `tox -e lint`

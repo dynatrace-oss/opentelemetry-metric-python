@@ -17,7 +17,7 @@ from collections import OrderedDict
 from typing import Union
 from unittest import mock
 
-from dynatrace.opentelemetry.metric import serializer
+from dynatrace.opentelemetry.metrics.export import serializer
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import aggregate, MetricRecord
 from opentelemetry.sdk.resources import Resource
