@@ -13,21 +13,29 @@
 # limitations under the License.
 
 import logging
+import requests
 from typing import Mapping, Optional, Sequence
 
-import requests
-
-from dynatrace.opentelemetry.metric import serializer
 from opentelemetry.sdk.metrics.export import (
     MetricsExporter,
     MetricRecord,
     MetricsExportResult,
 )
 
-logger = logging.Logger(__name__)
+from .serializer import DynatraceMetricsSerializer
+
+VERSION = "0.1.0-beta"
 
 
 class DynatraceMetricsExporter(MetricsExporter):
+    """
+    A class which implements the OpenTelemetry MetricsExporter interface
+
+    Methods
+    -------
+    export(metric_records: Sequence[MetricRecord])
+    """
+    __logger = logging.Logger(__name__)
 
     def __init__(
         self,
@@ -37,7 +45,7 @@ class DynatraceMetricsExporter(MetricsExporter):
         tags: Optional[Mapping[str, str]] = None,
     ):
         self._endpoint_url = endpoint_url
-        self._serializer = serializer.DynatraceMetricsSerializer(prefix, tags)
+        self._serializer = DynatraceMetricsSerializer(prefix, tags)
         self._session = requests.Session()
         self._headers = {
             "Accept": "*/*; q=0",
@@ -49,6 +57,24 @@ class DynatraceMetricsExporter(MetricsExporter):
     def export(
         self, metric_records: Sequence[MetricRecord]
     ) -> MetricsExportResult:
+        """
+        Export a batch of metric records to Dynatrace
+
+        Parameters
+        ----------
+        metric_records : Sequence[MetricRecord], required
+            A sequence of metric records to be exported
+
+        Raises
+        ------
+        HTTPError
+            If one occurred
+
+        Returns
+        -------
+        MetricsExportResult
+            Indicates SUCCESS or FAILURE
+        """
         serialized_records = self._serializer.serialize_records(metric_records)
         if not serialized_records:
             return MetricsExportResult.SUCCESS
@@ -56,11 +82,11 @@ class DynatraceMetricsExporter(MetricsExporter):
         try:
             with self._session.post(
                 self._endpoint_url,
-                data = serialized_records,
-                headers = self._headers,
+                data=serialized_records,
+                headers=self._headers,
             ) as resp:
                 resp.raise_for_status()
         except Exception as ex:
-            logger.warning("Failed to export metrics: %s", ex)
+            self.__logger.warning("Failed to export metrics: %s", ex)
             return MetricsExportResult.FAILURE
         return MetricsExportResult.SUCCESS
