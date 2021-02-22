@@ -23,24 +23,30 @@ class OneAgentMetadataEnricher:
         self.__logger = logger
 
     def add_oneagent_metadata_to_tags(self, tags: Mapping[str, str]):
-        for key, value in self._parse_oneagent_metadata(self.__get_metadata_file_content()).items():
+        for key, value in self._parse_oneagent_metadata(
+                self.__get_metadata_file_content()).items():
             tags[key] = value
 
     def __get_metadata_file_content(self) -> List[str]:
         try:
             metadata_file_name = None
-            with open("dt_metadata_e617c525669e072eebe3d0f08212e8f2.properties", "r") as magic_file:
+            with open(
+                    "dt_metadata_e617c525669e072eebe3d0f08212e8f2.properties",
+                    "r") as magic_file:
                 metadata_file_name = magic_file.read()
 
             if not metadata_file_name:
-                self.__logger.debug("metadata file name not specified by OneAgent.")
+                self.__logger.debug("metadata file name not specified by "
+                                    "OneAgent.")
                 return []
 
             with open(metadata_file_name, "r") as attributes_file:
                 return attributes_file.readlines()
 
         except OSError:
-            logging.warning("could not read OneAgent metadata file. This is normal if OneAgent is not installed.")
+            logging.warning(
+                "could not read OneAgent metadata file. This is normal if "
+                "OneAgent is not installed.")
 
     def _parse_oneagent_metadata(self, lines) -> Mapping[str, str]:
         key_value_pairs = {}

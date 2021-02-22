@@ -50,7 +50,8 @@ class DynatraceMetricsExporter(MetricsExporter):
 
         all_tags = tags or {}
 
-        # is true only if export_oneagent_metadata is True, not if its None and also not if its False.
+        # is true only if export_oneagent_metadata is True, not if its None
+        # and also not if its False.
         if export_oneagent_metadata:
             enricher = OneAgentMetadataEnricher(self.__logger)
             enricher.add_oneagent_metadata_to_tags(all_tags)
