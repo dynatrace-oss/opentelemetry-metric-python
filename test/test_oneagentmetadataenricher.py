@@ -13,8 +13,10 @@
 # limitations under the License.
 import logging
 import unittest
+from unittest.mock import patch
 
 from dynatrace.opentelemetry.metrics.export import OneAgentMetadataEnricher
+from dynatrace.opentelemetry.metrics.export.serializer import DynatraceMetricsSerializer
 
 
 class TestOneAgentMetadataEnricher(unittest.TestCase):
@@ -36,3 +38,30 @@ class TestOneAgentMetadataEnricher(unittest.TestCase):
         self.assertFalse(enricher._parse_oneagent_metadata(["="]))
         self.assertFalse(enricher._parse_oneagent_metadata(["==="]))
         self.assertFalse(enricher._parse_oneagent_metadata([]))
+
+
+class TestExportToTags(unittest.TestCase):
+    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher.OneAgentMetadataEnricher'
+           '._parse_oneagent_metadata')
+    def test_mock_get_metadata_file(self, mock_func):
+        mock_func.return_value = {"k1": "v1", "k2": "v2"}
+
+        enricher = OneAgentMetadataEnricher(logging.Logger(__name__))
+        # put something in the map to make sure items are added and not overwritten.
+        tags = {"tag1": "value1"}
+        enricher.add_oneagent_metadata_to_tags(tags)
+
+        self.assertEqual(tags, {"tag1": "value1", "k1": "v1", "k2": "v2"})
+
+    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher.OneAgentMetadataEnricher'
+           '._parse_oneagent_metadata')
+    def test_tags_overwritten(self, mock_func):
+        enricher = OneAgentMetadataEnricher(logging.Logger(__name__))
+        tags = {"tag1": "value1"}
+        mock_func.return_value = {"tag1": "newValue"}
+
+        enricher.add_oneagent_metadata_to_tags(tags)
+
+        self.assertEqual(tags, {"tag1": "newValue"})
+
+

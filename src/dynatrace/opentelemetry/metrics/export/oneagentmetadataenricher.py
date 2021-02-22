@@ -23,7 +23,7 @@ class OneAgentMetadataEnricher:
         self.__logger = logger
 
     def add_oneagent_metadata_to_tags(self, tags: Mapping[str, str]):
-        for key, value in self._parse_oneagent_metadata(self.__get_metadata_file_content()):
+        for key, value in self._parse_oneagent_metadata(self.__get_metadata_file_content()).items():
             tags[key] = value
 
     def __get_metadata_file_content(self) -> List[str]:
