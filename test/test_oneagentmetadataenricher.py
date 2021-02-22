@@ -16,7 +16,6 @@ import unittest
 from unittest.mock import patch
 
 from dynatrace.opentelemetry.metrics.export import OneAgentMetadataEnricher
-from dynatrace.opentelemetry.metrics.export.serializer import DynatraceMetricsSerializer
 
 
 class TestOneAgentMetadataEnricher(unittest.TestCase):
@@ -63,5 +62,3 @@ class TestExportToTags(unittest.TestCase):
         enricher.add_oneagent_metadata_to_tags(tags)
 
         self.assertEqual(tags, {"tag1": "newValue"})
-
-

@@ -28,16 +28,16 @@ def _determine_is_delta_export():
 class DynatraceMetricsSerializer:
 
     def __init__(
-        self,
-        prefix: Optional[str],
-        tags: Optional[Mapping],
+            self,
+            prefix: Optional[str],
+            tags: Optional[Mapping],
     ):
         self._prefix = prefix
         self._tags = tags or {}
         self._is_delta_export = None
 
     def serialize_records(
-        self, records: Sequence[MetricRecord]
+            self, records: Sequence[MetricRecord]
     ) -> str:
         if self._is_delta_export is None:
             self._is_delta_export = _determine_is_delta_export()
@@ -49,9 +49,9 @@ class DynatraceMetricsSerializer:
         return "".join(string_buffer)
 
     def _write_record(
-        self,
-        string_buffer: List[str],
-        record: MetricRecord,
+            self,
+            string_buffer: List[str],
+            record: MetricRecord,
     ):
         aggregator = record.aggregator
         serialize_func = self._get_serialize_func(aggregator)
@@ -73,7 +73,7 @@ class DynatraceMetricsSerializer:
         string_buffer.append("\n")
 
     def _get_serialize_func(
-        self, aggregator: aggregate.Aggregator
+            self, aggregator: aggregate.Aggregator
     ) -> Optional[Callable]:
         if isinstance(aggregator, aggregate.SumAggregator):
             if self._is_delta_export:
@@ -91,24 +91,24 @@ class DynatraceMetricsSerializer:
 
     @staticmethod
     def _write_count_value_absolute(
-        string_buffer: List[str],
-        aggregator: aggregate.SumAggregator
+            string_buffer: List[str],
+            aggregator: aggregate.SumAggregator
     ):
         string_buffer.append(" count,")
         string_buffer.append(str(aggregator.checkpoint))
 
     @staticmethod
     def _write_count_value_delta(
-        string_buffer: List[str],
-        aggregator: aggregate.SumAggregator
+            string_buffer: List[str],
+            aggregator: aggregate.SumAggregator
     ):
         string_buffer.append(" count,delta=")
         string_buffer.append(str(aggregator.checkpoint))
 
     @staticmethod
     def _write_gauge_value(
-        string_buffer: List[str],
-        aggregator: aggregate.MinMaxSumCountAggregator,
+            string_buffer: List[str],
+            aggregator: aggregate.MinMaxSumCountAggregator,
     ):
         checkpoint = aggregator.checkpoint
         string_buffer.append(" gauge,min=")
@@ -121,8 +121,8 @@ class DynatraceMetricsSerializer:
         string_buffer.append(str(checkpoint.count))
 
     def _get_metric_key(
-        self,
-        record: MetricRecord,
+            self,
+            record: MetricRecord,
     ) -> str:
         metric_key = record.instrument.name
         if self._prefix:
@@ -161,7 +161,7 @@ class DynatraceMetricsSerializer:
 
     @staticmethod
     def _write_dimensions(
-        string_buffer: List[str], dimensions: Iterable[Tuple[str, str]]
+            string_buffer: List[str], dimensions: Iterable[Tuple[str, str]]
     ):
         for key, value in dimensions:
             string_buffer.append(",")
