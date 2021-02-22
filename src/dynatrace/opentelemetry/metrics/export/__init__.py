@@ -39,19 +39,17 @@ class DynatraceMetricsExporter(MetricsExporter):
     __logger = logging.Logger(__name__)
 
     def __init__(
-            self,
-            endpoint_url: str,
-            api_token: Optional[str] = None,
-            prefix: Optional[str] = None,
-            tags: Optional[Mapping[str, str]] = None,
-            export_oneagent_metadata: Optional[bool] = False,
+        self,
+        endpoint_url: str,
+        api_token: Optional[str] = None,
+        prefix: Optional[str] = None,
+        tags: Optional[Mapping[str, str]] = None,
+        export_oneagent_metadata: Optional[bool] = False,
     ):
         self._endpoint_url = endpoint_url
 
         all_tags = tags or {}
 
-        # is true only if export_oneagent_metadata is True, not if its None
-        # and also not if its False.
         if export_oneagent_metadata:
             enricher = OneAgentMetadataEnricher(self.__logger)
             enricher.add_oneagent_metadata_to_tags(all_tags)
@@ -66,7 +64,7 @@ class DynatraceMetricsExporter(MetricsExporter):
             self._headers["Authorization"] = "Api-Token " + api_token
 
     def export(
-            self, metric_records: Sequence[MetricRecord]
+        self, metric_records: Sequence[MetricRecord]
     ) -> MetricsExportResult:
         """
         Export a batch of metric records to Dynatrace
@@ -92,9 +90,9 @@ class DynatraceMetricsExporter(MetricsExporter):
 
         try:
             with self._session.post(
-                    self._endpoint_url,
-                    data=serialized_records,
-                    headers=self._headers,
+                self._endpoint_url,
+                data=serialized_records,
+                headers=self._headers,
             ) as resp:
                 resp.raise_for_status()
         except Exception as ex:
