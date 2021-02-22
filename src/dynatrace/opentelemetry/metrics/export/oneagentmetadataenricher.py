@@ -45,19 +45,19 @@ class OneAgentMetadataEnricher:
     def _parse_oneagent_metadata(self, lines) -> Mapping[str, str]:
         key_value_pairs = {}
         for line in lines:
-            self.__logger.debug(f"parsing line {line}")
+            self.__logger.debug("parsing line {}".format(line))
 
             split = line.strip().split("=", 1)
 
             if len(split) != 2:
-                self.__logger.warning(f"could not parse line {line}")
+                self.__logger.warning("could not parse line {}".format(line))
                 continue
 
             key, value = split
 
             # None or empty:
             if not key or not value:
-                self.__logger.warning(f"could not parse line {line}")
+                self.__logger.warning("could not parse line {}".format(line))
                 continue
 
             key_value_pairs[key] = value
