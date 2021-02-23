@@ -13,7 +13,8 @@
 # limitations under the License.
 import logging
 import unittest
-from unittest.mock import patch
+import tempfile
+from unittest.mock import patch, mock_open
 
 from dynatrace.opentelemetry.metrics.export import OneAgentMetadataEnricher
 
@@ -28,6 +29,7 @@ class TestOneAgentMetadataEnricher(unittest.TestCase):
 
         self.assertEqual("value1", parsed["key1"])
         self.assertEqual("value2", parsed["key2"])
+        self.assertEqual(2, len(parsed))
 
     def test_parse_invalid_metadata(self):
         enricher = OneAgentMetadataEnricher()
@@ -40,8 +42,23 @@ class TestOneAgentMetadataEnricher(unittest.TestCase):
         self.assertFalse(enricher._parse_oneagent_metadata(["==="]))
         self.assertFalse(enricher._parse_oneagent_metadata([]))
 
+    def test_valid_and_invalid(self):
+        enricher = OneAgentMetadataEnricher()
 
-class TestExportToTags(unittest.TestCase):
+        parsed = enricher._parse_oneagent_metadata([
+            "validKey1=validValue1",
+            "=invalidKey",
+            "invalidValue=",
+            "",
+            "validKey2=validValue2"
+        ])
+
+        self.assertEqual(2, len(parsed))
+        self.assertEqual("validValue1", parsed["validKey1"])
+        self.assertEqual("validValue2", parsed["validKey2"])
+
+
+class TestParseMetadata(unittest.TestCase):
     @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
            '.OneAgentMetadataEnricher._parse_oneagent_metadata')
     def test_mock_get_metadata_file(self, mock_func):
@@ -65,3 +82,115 @@ class TestExportToTags(unittest.TestCase):
         enricher.add_oneagent_metadata_to_tags(tags)
 
         self.assertEqual(tags, {"tag1": "newValue"})
+
+    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
+           '.OneAgentMetadataEnricher._get_metadata_file_content')
+    def test_parse_valid_data(self, mock_func):
+        mock_func.return_value = ["k1=v1\n", "k2=v2"]
+
+        enricher = OneAgentMetadataEnricher()
+        res = enricher._parse_oneagent_metadata(
+            enricher._get_metadata_file_content())
+
+        self.assertEqual(2, len(res))
+        self.assertEqual("v1", res["k1"])
+        self.assertEqual("v2", res["k2"])
+
+    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
+           '.OneAgentMetadataEnricher._get_metadata_file_content')
+    def test_parse_empty_list(self, mock_func):
+        mock_func.return_value = []
+
+        enricher = OneAgentMetadataEnricher()
+        res = enricher._parse_oneagent_metadata(
+            enricher._get_metadata_file_content())
+
+        self.assertEqual(0, len(res))
+
+
+class TestGetIndirectionFile(unittest.TestCase):
+    def test_get_indirection_file_contents_success(self):
+        # when open is called, a file with this content is returned
+        mock = mock_open(read_data="metadata_file_name")
+        enricher = OneAgentMetadataEnricher()
+        with patch("builtins.open", mock):
+            res = enricher._get_metadata_file_name("not-used-since-mocking")
+            self.assertEqual("metadata_file_name", res)
+
+    def test_get_indirection_file_missing_or_not_readable(self):
+        # will throw an IOError when calling open
+        mock = mock_open()
+        mock.side_effect = IOError()
+        enricher = OneAgentMetadataEnricher()
+        with patch("builtins.open", mock):
+            res = enricher._get_metadata_file_name("not-used-since-mocking")
+            self.assertEqual(None, res)
+
+    def test_get_indirection_fname_missing_empty_or_invalid(self):
+        enricher = OneAgentMetadataEnricher()
+        self.assertEqual(None, enricher._get_metadata_file_name(""))
+        self.assertEqual(None, enricher._get_metadata_file_name(None))
+        self.assertEqual(None, enricher._get_metadata_file_name("#%&^:"))
+
+
+class TestGetMetadataContents(unittest.TestCase):
+    def test_indirection_file_empty(self):
+        mock = mock_open(read_data="")
+        enricher = OneAgentMetadataEnricher()
+
+        with patch("builtins.open", mock):
+            res = enricher._get_metadata_file_content()
+            self.assertEqual(0, len(res))
+
+    def test_get_file_contents_success(self):
+        mock = mock_open(read_data="key1=value1\nkey2=value2")
+        enricher = OneAgentMetadataEnricher()
+        with patch("builtins.open", mock):
+            res = enricher._get_metadata_file_content()
+            self.assertEqual(2, len(res))
+
+    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
+           '.OneAgentMetadataEnricher._get_metadata_file_name')
+    def test_get_file_contents_from_none(self, mock_func):
+        mock_func.return_value = None
+
+        enricher = OneAgentMetadataEnricher()
+        res = enricher._get_metadata_file_content()
+        self.assertEqual(0, len(res))
+
+    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
+           '.OneAgentMetadataEnricher._get_metadata_file_name')
+    def test_get_file_contents_from_tmpfile(self, mock_func):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmpfile_name = tmp_dir + "/tmp_file"
+            with open(tmpfile_name, "w") as tmp_file:
+                tmp_file.write("\n".join(["key1=value1", "key2=value2"]))
+
+            mock_func.return_value = tmpfile_name
+
+            enricher = OneAgentMetadataEnricher()
+            res = enricher._get_metadata_file_content()
+            self.assertEqual(2, len(res))
+
+    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
+           '.OneAgentMetadataEnricher._get_metadata_file_name')
+    def test_get_file_contents_from_nonexistent_file(self, mock_func):
+        temp = tempfile.NamedTemporaryFile()
+        mock_func.return_value = temp.name
+        # this will automatically delete the tempfile, making sure that it does
+        # not exist any more
+        temp.close()
+
+        enricher = OneAgentMetadataEnricher()
+        # will try to read from the not-anymore-existing tempfile
+        res = enricher._get_metadata_file_content()
+        self.assertEqual(0, len(res))
+
+    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
+           '.OneAgentMetadataEnricher._get_metadata_file_name')
+    def test_get_file_contents_from_invalid_filename(self, mock_func):
+        mock_func.return_value = "^%#&"
+
+        enricher = OneAgentMetadataEnricher()
+        res = enricher._get_metadata_file_content()
+        self.assertEqual(0, len(res))
