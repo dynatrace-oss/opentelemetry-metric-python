@@ -19,52 +19,53 @@ from typing import List, Mapping
 class OneAgentMetadataEnricher:
     __logger = None
 
-    def __init__(self, logger: logging.Logger) -> None:
-        self.__logger = logger
+    def __init__(self) -> None:
+        self.__logger = logging.Logger(self.__class__.__name__)
 
     def add_oneagent_metadata_to_tags(self, tags: Mapping[str, str]):
-        for key, value in self._parse_oneagent_metadata(
-                self.__get_metadata_file_content()).items():
+        metadata_file_content = self.__get_metadata_file_content()
+        parsed_metadata = self._parse_oneagent_metadata(metadata_file_content)
+        for key, value in parsed_metadata.items():
             tags[key] = value
 
     def __get_metadata_file_content(self) -> List[str]:
         try:
             metadata_file_name = None
-            with open(
-                "dt_metadata_e617c525669e072eebe3d0f08212e8f2.properties",
-                    "r") as magic_file:
-                metadata_file_name = magic_file.read()
+            indirection_fname = \
+                "dt_metadata_e617c525669e072eebe3d0f08212e8f2.properties"
+            with open(indirection_fname, "r") as metadata_indirection_file:
+                metadata_file_name = metadata_indirection_file.read()
 
             if not metadata_file_name:
-                self.__logger.debug("metadata file name not specified by "
-                                    "OneAgent.")
+                self.__logger.warning("Metadata file name not specified by "
+                                      "OneAgent.")
                 return []
 
             with open(metadata_file_name, "r") as attributes_file:
                 return attributes_file.readlines()
 
         except OSError:
-            logging.warning(
-                "could not read OneAgent metadata file. This is normal if "
+            logging.info(
+                "Could not read OneAgent metadata file. This is normal if "
                 "OneAgent is not installed.")
         return []
 
     def _parse_oneagent_metadata(self, lines) -> Mapping[str, str]:
         key_value_pairs = {}
         for line in lines:
-            self.__logger.debug("parsing line {}".format(line))
+            self.__logger.debug("Parsing line {}".format(line))
 
             split = line.strip().split("=", 1)
 
             if len(split) != 2:
-                self.__logger.warning("could not parse line {}".format(line))
+                self.__logger.warning("Could not parse line {}".format(line))
                 continue
 
             key, value = split
 
             # None or empty:
             if not key or not value:
-                self.__logger.warning("could not parse line {}".format(line))
+                self.__logger.warning("Could not parse line {}".format(line))
                 continue
 
             key_value_pairs[key] = value

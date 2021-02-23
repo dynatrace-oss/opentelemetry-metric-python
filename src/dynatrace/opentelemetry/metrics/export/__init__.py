@@ -51,7 +51,7 @@ class DynatraceMetricsExporter(MetricsExporter):
         all_tags = tags or {}
 
         if export_oneagent_metadata:
-            enricher = OneAgentMetadataEnricher(self.__logger)
+            enricher = OneAgentMetadataEnricher()
             enricher.add_oneagent_metadata_to_tags(all_tags)
 
         self._serializer = DynatraceMetricsSerializer(prefix, all_tags)

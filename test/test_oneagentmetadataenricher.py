@@ -22,7 +22,7 @@ class TestOneAgentMetadataEnricher(unittest.TestCase):
     __logger = logging.Logger(__name__)
 
     def test_parse_oneagent_metadata(self):
-        enricher = OneAgentMetadataEnricher(self.__logger)
+        enricher = OneAgentMetadataEnricher()
         parsed = enricher._parse_oneagent_metadata(["key1=value1",
                                                     "key2=value2"])
 
@@ -30,7 +30,7 @@ class TestOneAgentMetadataEnricher(unittest.TestCase):
         self.assertEqual("value2", parsed["key2"])
 
     def test_parse_invalid_metadata(self):
-        enricher = OneAgentMetadataEnricher(self.__logger)
+        enricher = OneAgentMetadataEnricher()
 
         self.assertFalse(enricher._parse_oneagent_metadata(
             ["=0x5c14d9a68d569861"]))
@@ -47,7 +47,7 @@ class TestExportToTags(unittest.TestCase):
     def test_mock_get_metadata_file(self, mock_func):
         mock_func.return_value = {"k1": "v1", "k2": "v2"}
 
-        enricher = OneAgentMetadataEnricher(logging.Logger(__name__))
+        enricher = OneAgentMetadataEnricher()
         # put something in the map to make sure items are added and not
         # overwritten.
         tags = {"tag1": "value1"}
@@ -58,7 +58,7 @@ class TestExportToTags(unittest.TestCase):
     @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
            '.OneAgentMetadataEnricher._parse_oneagent_metadata')
     def test_tags_overwritten(self, mock_func):
-        enricher = OneAgentMetadataEnricher(logging.Logger(__name__))
+        enricher = OneAgentMetadataEnricher()
         tags = {"tag1": "value1"}
         mock_func.return_value = {"tag1": "newValue"}
 
