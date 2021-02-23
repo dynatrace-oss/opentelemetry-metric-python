@@ -17,49 +17,93 @@ import time
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
-
-metrics.set_meter_provider(MeterProvider())
-meter = metrics.get_meter(__name__)
-
-endpoint_url = None
-api_token = None
-exporter = DynatraceMetricsExporter(endpoint_url, api_token)
-
-# start_pipeline will notify the MeterProvider to begin collecting/exporting
-# metrics with the given meter, exporter and interval in seconds
-metrics.get_meter_provider().start_pipeline(meter, exporter, 5)
-
-requests_counter = meter.create_counter(
-    name="requests",
-    description="number of requests",
-    unit="1",
-    value_type=int
-)
-
-requests_size = meter.create_valuerecorder(
-    name="request_size",
-    description="size of requests",
-    unit="1",
-    value_type=int,
-)
+import argparse
 
 
-# Labels are used to identify key-values that are associated with a specific
-# metric that you want to record. These are useful for pre-aggregation and can
-# be used to store custom dimensions pertaining to a metric
-staging_labels = {"environment": "staging"}
-testing_labels = {"environment": "testing"}
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Example exporting metrics using the Dynatrace metrics "
+                    "exporter.",
+        epilog="The script can be run without any arguments. In that case, "
+               "the local OneAgent is used as an endpoint.")
+    parser.add_argument("-e", "--endpoint", type=str, dest="endpoint",
+                        default="http://127.0.0.1:14499/metrics/ingest",
+                        help="The endpoint url used to export metrics to. "
+                             "This can be either a dynatrace metrics "
+                             "ingestion endpoint, or a local OneAgent "
+                             "endpoint. If no value is set, use the default "
+                             "local OneAgent endpoint")
 
-# Update the metric instruments using the direct calling convention
-requests_counter.add(25, staging_labels)
-requests_size.record(100, staging_labels)
-time.sleep(10)
+    parser.add_argument("-t", "--token", default=None, type=str, dest="token",
+                        help="API Token generated in the Dynatrace UI. Needs "
+                             "to have metrics ingestion enabled in order to "
+                             "work correctly. Can be omitted when exporting "
+                             "to the local OneAgent.")
 
-requests_counter.add(50, staging_labels)
-requests_size.record(5000, staging_labels)
-time.sleep(5)
+    parser.add_argument("-nm", "--no-metadata", dest="metadata_enrichment",
+                        action="store_false",
+                        help="Turn off OneAgent Metadata enrichment. If no "
+                             "OneAgent is running on the machine, this is "
+                             "ignored. Otherwise, OneAgent metadata will be "
+                             "added to each of the exported metric lines")
 
-requests_counter.add(35, testing_labels)
-requests_size.record(2, testing_labels)
+    parser.set_defaults(metadata_enrichment=True)
+    return parser.parse_args()
 
-input("...\n")
+
+if __name__ == '__main__':
+    args = parse_arguments()
+
+    # set up opentelemetry for export:
+    metrics.set_meter_provider(MeterProvider())
+    meter = metrics.get_meter(__file__)
+
+    exporter = DynatraceMetricsExporter(args.endpoint, args.token,
+                                        export_oneagent_metadata=
+                                        args.metadata_enrichment)
+
+    # this line registers the meter and exporter with the MeterProvider set
+    # above. All instruments created by the meter that is registered here will
+    # export to the Dynatrace metrics exporter. It is a good idea to keep a 
+    # reference to the meter (e. g. in a global variable) in order to create
+    # instruments anywhere in the code that all export to the same Dynatrace
+    # metrics exporter.
+    metrics.get_meter_provider().start_pipeline(meter, exporter, 5.)
+
+    requests_counter = meter.create_counter(
+        name="requests",
+        description="number of requests",
+        unit="1",
+        value_type=int
+    )
+
+    requests_size = meter.create_valuerecorder(
+        name="request_size",
+        description="size of requests",
+        unit="1",
+        value_type=int,
+    )
+    #
+    # Labels are used to identify key-values that are associated with a specific
+    # metric that you want to record. These are useful for pre-aggregation and
+    # can be used to store custom dimensions pertaining to a metric
+    staging_labels = {"environment": "staging"}
+    testing_labels = {"environment": "testing"}
+
+    try:
+        while True:
+            # Update the metric instruments using the direct calling convention
+            requests_counter.add(25, staging_labels)
+            requests_size.record(100, staging_labels)
+            time.sleep(5)
+
+            requests_counter.add(50, staging_labels)
+            requests_size.record(5000, staging_labels)
+            time.sleep(5)
+
+            requests_counter.add(35, testing_labels)
+            requests_size.record(2, testing_labels)
+            time.sleep(5)
+
+    except KeyboardInterrupt:
+        print("shutting down...")
