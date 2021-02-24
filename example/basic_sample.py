@@ -17,6 +17,7 @@ import time
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
+from os.path import splitext, basename
 import argparse
 
 
@@ -25,14 +26,14 @@ def parse_arguments():
         description="Example exporting metrics using the Dynatrace metrics "
                     "exporter.",
         epilog="The script can be run without any arguments. In that case, "
-               "the local OneAgent is used as an endpoint.")
+               "the local OneAgent is used as an endpoint, if it is installed.")
     parser.add_argument("-e", "--endpoint", type=str, dest="endpoint",
                         default="http://127.0.0.1:14499/metrics/ingest",
                         help="The endpoint url used to export metrics to. "
-                             "This can be either a dynatrace metrics "
+                             "This can be either a Dynatrace metrics "
                              "ingestion endpoint, or a local OneAgent "
                              "endpoint. If no value is set, use the default "
-                             "local OneAgent endpoint")
+                             "local OneAgent endpoint is used.")
 
     parser.add_argument("-t", "--token", default=None, type=str, dest="token",
                         help="API Token generated in the Dynatrace UI. Needs "
@@ -45,7 +46,15 @@ def parse_arguments():
                         help="Turn off OneAgent Metadata enrichment. If no "
                              "OneAgent is running on the machine, this is "
                              "ignored. Otherwise, OneAgent metadata will be "
-                             "added to each of the exported metric lines")
+                             "added to each of the exported metric lines.")
+
+    parser.add_argument("-i", "-interval", default=10., type=float,
+                        dest="interval",
+                        help="Set the export interval for the Dynatrace metrics"
+                             " exporter. This specifies how often data is "
+                             "exported to Dynatrace. We suggest using export"
+                             "intervals of 10 to 60 seconds. The default "
+                             "interval is 10 seconds.")
 
     parser.set_defaults(metadata_enrichment=True)
     return parser.parse_args()
@@ -56,19 +65,18 @@ if __name__ == '__main__':
 
     # set up opentelemetry for export:
     metrics.set_meter_provider(MeterProvider())
-    meter = metrics.get_meter(__file__)
+    meter = metrics.get_meter(splitext(basename(__file__))[0])
 
     exporter = DynatraceMetricsExporter(args.endpoint, args.token,
-                                        export_oneagent_metadata=
-                                        args.metadata_enrichment)
+        prefix="otel.python", export_oneagent_metadata=args.metadata_enrichment)
 
-    # this line registers the meter and exporter with the MeterProvider set
-    # above. All instruments created by the meter that is registered here will
-    # export to the Dynatrace metrics exporter. It is a good idea to keep a 
-    # reference to the meter (e. g. in a global variable) in order to create
-    # instruments anywhere in the code that all export to the same Dynatrace
-    # metrics exporter.
-    metrics.get_meter_provider().start_pipeline(meter, exporter, 5.)
+    # This call registers the meter and exporter with the global
+    # MeterProvider set above. All instruments created by the meter that is
+    # registered here will export to the Dynatrace metrics exporter. It is a
+    # good idea to keep a reference to the meter (e. g. in a global variable)
+    # in order to create instruments anywhere in the code that all export to
+    # the same Dynatrace metrics exporter.
+    metrics.get_meter_provider().start_pipeline(meter, exporter, args.interval)
 
     requests_counter = meter.create_counter(
         name="requests",
@@ -78,9 +86,9 @@ if __name__ == '__main__':
     )
 
     requests_size = meter.create_valuerecorder(
-        name="request_size",
+        name="request_size_bytes",
         description="size of requests",
-        unit="1",
+        unit="byte",
         value_type=int,
     )
     #
