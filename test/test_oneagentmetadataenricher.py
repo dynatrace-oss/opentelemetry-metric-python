@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import os
 import unittest
 import tempfile
 from unittest.mock import patch, mock_open
@@ -83,27 +84,19 @@ class TestParseMetadata(unittest.TestCase):
 
         self.assertEqual(tags, {"tag1": "newValue"})
 
-    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
-           '.OneAgentMetadataEnricher._get_metadata_file_content')
-    def test_parse_valid_data(self, mock_func):
-        mock_func.return_value = ["k1=v1\n", "k2=v2"]
-
+    def test_parse_valid_data(self):
+        in_list = ["k1=v1\n", "k2=v2"]
         enricher = OneAgentMetadataEnricher()
-        res = enricher._parse_oneagent_metadata(
-            enricher._get_metadata_file_content())
+        res = enricher._parse_oneagent_metadata(in_list)
 
         self.assertEqual(2, len(res))
         self.assertEqual("v1", res["k1"])
         self.assertEqual("v2", res["k2"])
 
-    @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
-           '.OneAgentMetadataEnricher._get_metadata_file_content')
-    def test_parse_empty_list(self, mock_func):
-        mock_func.return_value = []
-
+    def test_parse_empty_list(self):
+        in_list = []
         enricher = OneAgentMetadataEnricher()
-        res = enricher._parse_oneagent_metadata(
-            enricher._get_metadata_file_content())
+        res = enricher._parse_oneagent_metadata(in_list)
 
         self.assertEqual(0, len(res))
 
@@ -143,7 +136,16 @@ class TestGetMetadataContents(unittest.TestCase):
             self.assertEqual(0, len(res))
 
     def test_get_file_contents_success(self):
-        mock = mock_open(read_data="key1=value1\nkey2=value2")
+        # this only tests _get_metadata_file_content() paritally since both
+        # open calls are mocked, so even if the file does not exist this test
+        # will pass since the second open call is also mocked.
+        mock = mock_open()
+        # return "indirection_filename" on the first open call and the
+        # key-vlaue pairs on the second.
+        mock.side_effect = [mock_open(read_data=x).return_value for x in
+                            ["indirection_filename",
+                             "key1=value1\nkey2=value2"]]
+
         enricher = OneAgentMetadataEnricher()
         with patch("builtins.open", mock):
             res = enricher._get_metadata_file_content()
@@ -162,7 +164,7 @@ class TestGetMetadataContents(unittest.TestCase):
            '.OneAgentMetadataEnricher._get_metadata_file_name')
     def test_get_file_contents_from_tmpfile(self, mock_func):
         with tempfile.TemporaryDirectory() as tmp_dir:
-            tmpfile_name = tmp_dir + "/tmp_file"
+            tmpfile_name = os.path.join(tmp_dir, "tmp_file")
             with open(tmpfile_name, "w") as tmp_file:
                 tmp_file.write("\n".join(["key1=value1", "key2=value2"]))
 

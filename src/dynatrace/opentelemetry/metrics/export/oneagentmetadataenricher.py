@@ -58,7 +58,8 @@ class OneAgentMetadataEnricher:
                 return attributes_file.readlines()
         except OSError:
             self.__logger.info(
-                "Could not read OneAgent metadata file.")
+                "Could not read OneAgent metadata file. ({})".format(
+                    metadata_file_name))
             return []
 
     def _parse_oneagent_metadata(self, lines) -> Mapping[str, str]:
