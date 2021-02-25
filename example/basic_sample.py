@@ -92,7 +92,7 @@ if __name__ == '__main__':
         unit="byte",
         value_type=int,
     )
-    #
+
     # Labels are used to identify key-values that are associated with a specific
     # metric that you want to record. These are useful for pre-aggregation and
     # can be used to store custom dimensions pertaining to a metric
