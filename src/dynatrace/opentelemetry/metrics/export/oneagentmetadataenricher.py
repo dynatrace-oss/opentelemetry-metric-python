@@ -37,10 +37,15 @@ class OneAgentMetadataEnricher:
             with open(indirection_fname, "r") as metadata_indirection_file:
                 file_name = metadata_indirection_file.read()
 
+            if not file_name:
+                self.__logger.warning("OneAgent metadata file not specified "
+                                      "in indirection file.")
+
         except OSError:
-            self.__logger.info("Could not read local OneAgent indirection "
-                               "file. This is normal if no OneAgent is "
-                               "installed.")
+            self.__logger.warning("Could not read local OneAgent metadata "
+                                  "enrichment file. This is normal if no "
+                                  "OneAgent is installed.")
+
         return file_name
 
     def _get_metadata_file_content(self) -> List[str]:
@@ -50,8 +55,6 @@ class OneAgentMetadataEnricher:
             )
 
             if not metadata_file_name:
-                self.__logger.warning("Metadata file not specified in "
-                                      "indirection file!")
                 return []
 
             with open(metadata_file_name, "r") as attributes_file:
