@@ -27,8 +27,7 @@ def parse_arguments():
                     "exporter.",
         epilog="The script can be run without any arguments. In that case, "
                "the local OneAgent is used as an endpoint, if it is installed.")
-    parser.add_argument("-e", "--endpoint", type=str, dest="endpoint",
-                        default="http://127.0.0.1:14499/metrics/ingest",
+    parser.add_argument("-e", "--endpoint", default=None, type=str, dest="endpoint",
                         help="The endpoint url used to export metrics to. "
                              "This can be either a Dynatrace metrics "
                              "ingestion endpoint, or a local OneAgent "
@@ -62,6 +61,10 @@ def parse_arguments():
 
 if __name__ == '__main__':
     args = parse_arguments()
+
+    if not args.endpoint:
+        print("No Dynatrace endpoint specified, exporting to default local "
+              "OneAgent ingest endpoint.")
 
     # set up opentelemetry for export:
     metrics.set_meter_provider(MeterProvider())
