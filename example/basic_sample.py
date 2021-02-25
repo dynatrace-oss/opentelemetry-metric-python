@@ -32,8 +32,8 @@ def parse_arguments():
                         help="The endpoint url used to export metrics to. "
                              "This can be either a Dynatrace metrics "
                              "ingestion endpoint, or a local OneAgent "
-                             "endpoint. If no value is set, use the "
-                             "local OneAgent endpoint.")
+                             "endpoint. If no value is set, the local OneAgent"
+                             " endpoint is used.")
 
     parser.add_argument("-t", "--token", default=None, type=str, dest="token",
                         help="API Token generated in the Dynatrace UI. Needs "
