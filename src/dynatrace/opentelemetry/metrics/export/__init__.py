@@ -40,13 +40,18 @@ class DynatraceMetricsExporter(MetricsExporter):
 
     def __init__(
         self,
-        endpoint_url: str,
+        endpoint_url: Optional[str] = None,
         api_token: Optional[str] = None,
         prefix: Optional[str] = None,
         tags: Optional[Mapping[str, str]] = None,
         export_oneagent_metadata: Optional[bool] = False,
     ):
-        self._endpoint_url = endpoint_url
+        if endpoint_url:
+            self._endpoint_url = endpoint_url
+        else:
+            self.__logger.info("No Dynatrace endpoint specified, exporting "
+                               "to default local OneAgent ingest endpoint.")
+            self._endpoint_url = "http://localhost:14499/metrics/ingest"
 
         all_tags = tags or {}
 
