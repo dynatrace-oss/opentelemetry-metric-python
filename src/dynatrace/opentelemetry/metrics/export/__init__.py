@@ -23,6 +23,7 @@ from opentelemetry.sdk.metrics.export import (
 )
 
 from .serializer import DynatraceMetricsSerializer
+from .oneagentmetadataenricher import OneAgentMetadataEnricher
 
 VERSION = "0.1.0-beta"
 
@@ -43,9 +44,17 @@ class DynatraceMetricsExporter(MetricsExporter):
         api_token: Optional[str] = None,
         prefix: Optional[str] = None,
         tags: Optional[Mapping[str, str]] = None,
+        export_oneagent_metadata: Optional[bool] = False,
     ):
         self._endpoint_url = endpoint_url
-        self._serializer = DynatraceMetricsSerializer(prefix, tags)
+
+        all_tags = tags or {}
+
+        if export_oneagent_metadata:
+            enricher = OneAgentMetadataEnricher()
+            enricher.add_oneagent_metadata_to_tags(all_tags)
+
+        self._serializer = DynatraceMetricsSerializer(prefix, all_tags)
         self._session = requests.Session()
         self._headers = {
             "Accept": "*/*; q=0",
