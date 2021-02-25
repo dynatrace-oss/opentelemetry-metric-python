@@ -150,6 +150,10 @@ class TestGetMetadataContents(unittest.TestCase):
         with patch("builtins.open", mock):
             res = enricher._get_metadata_file_content()
             self.assertEqual(2, len(res))
+            # at this stage, values are not yet parsed. removing trailing 
+            # whitespace is done in the _parse_oneagent_metadata function.
+            self.assertEqual("key1=value1\n", res[0])
+            self.assertEqual("key2=value2", res[1])
 
     @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
            '.OneAgentMetadataEnricher._get_metadata_file_name')
@@ -173,6 +177,8 @@ class TestGetMetadataContents(unittest.TestCase):
             enricher = OneAgentMetadataEnricher()
             res = enricher._get_metadata_file_content()
             self.assertEqual(2, len(res))
+            self.assertEqual("key1=value1\n", res[0])
+            self.assertEqual("key2=value2", res[1])
 
     @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
            '.OneAgentMetadataEnricher._get_metadata_file_name')

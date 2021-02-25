@@ -32,8 +32,8 @@ def parse_arguments():
                         help="The endpoint url used to export metrics to. "
                              "This can be either a Dynatrace metrics "
                              "ingestion endpoint, or a local OneAgent "
-                             "endpoint. If no value is set, use the default "
-                             "local OneAgent endpoint is used.")
+                             "endpoint. If no value is set, use the "
+                             "local OneAgent endpoint.")
 
     parser.add_argument("-t", "--token", default=None, type=str, dest="token",
                         help="API Token generated in the Dynatrace UI. Needs "
@@ -48,13 +48,13 @@ def parse_arguments():
                              "ignored. Otherwise, OneAgent metadata will be "
                              "added to each of the exported metric lines.")
 
-    parser.add_argument("-i", "-interval", default=10., type=float,
+    parser.add_argument("-i", "--interval", default=10., type=float,
                         dest="interval",
-                        help="Set the export interval for the Dynatrace metrics"
-                             " exporter. This specifies how often data is "
-                             "exported to Dynatrace. We suggest using export"
-                             "intervals of 10 to 60 seconds. The default "
-                             "interval is 10 seconds.")
+                        help="Set the export interval in seconds for the "
+                             "Dynatrace metrics exporter. This specifies how "
+                             "often data is exported to Dynatrace. We suggest "
+                             "using export intervals of 10 to 60 seconds. The "
+                             "default interval is 10 seconds.")
 
     parser.set_defaults(metadata_enrichment=True)
     return parser.parse_args()
@@ -68,7 +68,8 @@ if __name__ == '__main__':
     meter = metrics.get_meter(splitext(basename(__file__))[0])
 
     exporter = DynatraceMetricsExporter(args.endpoint, args.token,
-        prefix="otel.python", export_oneagent_metadata=args.metadata_enrichment)
+                                        prefix="otel.python",
+                                        export_oneagent_metadata=args.metadata_enrichment)
 
     # This call registers the meter and exporter with the global
     # MeterProvider set above. All instruments created by the meter that is

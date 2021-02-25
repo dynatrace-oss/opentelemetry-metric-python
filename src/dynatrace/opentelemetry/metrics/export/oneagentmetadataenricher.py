@@ -58,7 +58,7 @@ class OneAgentMetadataEnricher:
                 return attributes_file.readlines()
         except OSError:
             self.__logger.info(
-                "Could not read OneAgent metadata file. ({})".format(
+                "Could not read OneAgent metadata file ({}).".format(
                     metadata_file_name))
             return []
 
@@ -71,14 +71,14 @@ class OneAgentMetadataEnricher:
             split = line.strip().split("=", 1)
 
             if len(split) != 2:
-                self.__logger.warning("Could not parse line {}".format(line))
+                self.__logger.warning("Could not parse line '{}'".format(line))
                 continue
 
             key, value = split
 
             # None or empty:
             if not key or not value:
-                self.__logger.warning("Could not parse line {}".format(line))
+                self.__logger.warning("Could not parse line '{}'".format(line))
                 continue
 
             key_value_pairs[key] = value
