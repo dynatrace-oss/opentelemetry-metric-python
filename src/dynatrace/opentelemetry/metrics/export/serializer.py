@@ -129,17 +129,6 @@ class DynatraceMetricsSerializer:
             metric_key = self._prefix + "." + metric_key
         return DynatraceMetricsSerializer._normalize_metric_key(metric_key)
 
-    # characters not valid to start the first identifier key section
-    __re_metric_key_first_identifier_section_start = re.compile(r"^[^a-zA-Z_]+")
-
-    # characters not valid to start subsequent identifier key sections
-    __re_metric_key_identifier_section_start = re.compile(r"^[^a-zA-Z0-9_]+")
-
-    # for the rest of the metric key characters, alphanumeric characters as
-    # well as hyphens and underscores are allowed. consecutive invalid
-    # characters will be condensed into one underscore.
-    __re_metric_key_invalid_characters = re.compile(r"[^a-zA-Z0-9_\-]+")
-
     @staticmethod
     def _normalize_metric_key(key: str) -> str:
         first, *rest = key.split(".")
@@ -157,6 +146,17 @@ class DynatraceMetricsSerializer:
         )))
 
         return ".".join([x for x in [first] + rest if x != ""])
+
+    # characters not valid to start the first identifier key section
+    __re_metric_key_first_identifier_section_start = re.compile(r"^[^a-zA-Z_]+")
+
+    # characters not valid to start subsequent identifier key sections
+    __re_metric_key_identifier_section_start = re.compile(r"^[^a-zA-Z0-9_]+")
+
+    # for the rest of the metric key characters, alphanumeric characters as
+    # well as hyphens and underscores are allowed. consecutive invalid
+    # characters will be condensed into one underscore.
+    __re_metric_key_invalid_characters = re.compile(r"[^a-zA-Z0-9_\-]+")
 
     @classmethod
     def __normalize_metric_key_first_section(cls, section: str) -> str:
@@ -207,13 +207,29 @@ class DynatraceMetricsSerializer:
         string_buffer: List[str], dimensions: Iterable[Tuple[str, str]]
     ):
         for key, value in dimensions:
-            string_buffer.append(",")
-            string_buffer.append(key)
-            string_buffer.append("=")
-            string_buffer.append(value)
+            dim_key = DynatraceMetricsSerializer._normalize_dimension_key(key)
+            if dim_key:
+                dim_value = \
+                    DynatraceMetricsSerializer._normalize_dimension_value(value)
+
+                string_buffer.append(",")
+                string_buffer.append(dim_key)
+                string_buffer.append("=")
+                string_buffer.append(dim_value)
+
+            # else: the dimension is empty, the dimension is dropped.
 
     @staticmethod
     def _write_timestamp(sb: List[str], aggregator: aggregate.Aggregator):
         sb.append(" ")
         # nanos to millis
         sb.append(str(aggregator.last_update_timestamp // 1000000))
+
+    __re_control_characters = re.compile(r"[\n\t\r]")
+    __re_characters_to_escape = re.compile(r"([= ,\\])")
+
+    @classmethod
+    def _normalize_dimension_value(cls, value: str):
+        value = cls.__re_control_characters.sub("", value)
+        value = cls.__re_characters_to_escape.sub(r"\\\g<1>", value)
+        return value

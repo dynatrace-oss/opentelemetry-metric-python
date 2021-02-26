@@ -23,6 +23,7 @@ cases_metric_keys = [
     ("valid number", "basecase1", "basecase1"),
     ("invalid leading number", "1basecase", "basecase"),
     ("valid leading uppercase", "Basecase", "Basecase"),
+    ("valid all uppercase", "BASECASE", "BASECASE"),
     ("valid intermittent uppercase", "baseCase", "baseCase"),
     ("valid multiple sections", "prefix.case", "prefix.case"),
     ("valid multiple sections upper", "This.Is.Valid", "This.Is.Valid"),
@@ -61,7 +62,7 @@ cases_metric_keys = [
 
 @pytest.mark.parametrize("msg,inp,exp", cases_metric_keys,
                          ids=[x[0] for x in cases_metric_keys])
-def test_pytest_normalize_metric_key(msg, inp, exp):
+def test_parametrized_normalize_metric_key(msg, inp, exp):
     assert dms._normalize_metric_key(inp) == exp
 
 
@@ -69,7 +70,10 @@ cases_dimension_keys = [
     ("valid case", "dim", "dim"),
     ("valid number", "dim1", "dim1"),
     ("valid leading underscore", "_dim", "_dim"),
-    ("invalid uppercase", "Dim1", "dim1"),
+    ("invalid leading uppercase", "Dim", "dim"),
+    ("invalid internal uppercase", "dIm", "dim"),
+    ("invalid trailing uppercase", "diM", "dim"),
+    ("invalid all uppercase", "DIM", "dim"),
     ("valid dimension colon", "dim:dim", "dim:dim"),
     ("valid dimension underscore", "dim_dim", "dim_dim"),
     ("valid dimension hyphen", "dim-dim", "dim-dim"),
@@ -93,6 +97,10 @@ cases_dimension_keys = [
     ("invalid trailing dot", "a.", "a"),
     ("invlid trailing dots", "a...", "a"),
     ("invalid enclosing dots", ".a.", "a"),
+    ("invalid leading whitespace", "   a", "a"),
+    ("invalid trailing whitespace", "a   ", "a_"),
+    ("invalid internal whitespace", "a b", "a_b"),
+    ("invalid internal whitespace", "a    b", "a_b"),
     ("invalid empty", "", ""),
     ("valid combined key", "dim.val:count.val001", "dim.val:count.val001"),
     ("invalid characters", "a,,,b  c=d\\e\\ =,f", "a_b_c_d_e_f"),
@@ -104,5 +112,25 @@ cases_dimension_keys = [
 
 @pytest.mark.parametrize("msg,inp,exp", cases_dimension_keys,
                          ids=[x[0] for x in cases_dimension_keys])
-def test_pytest_normalize_dimension_keys(msg, inp, exp):
+def test_parametrized_normalize_dimension_keys(msg, inp, exp):
     assert dms._normalize_dimension_key(inp) == exp
+
+
+cases_dimension_values = [
+    ("valid value", "value", "value"),
+    ("valid uppercase", "VALUE", "VALUE"),
+    ("valid colon", "a:3", "a:3"),
+    ("valid value 2", "~@#ä", "~@#ä"),
+    ("escape spaces", "a b", "a\\ b"),
+    ("escape comma", "a,b", "a\\,b"),
+    ("escape equals", "a=b", "a\\=b"),
+    ("escape backslash", "a\\b", "a\\\\b"),
+    ("escape multiple invalids", " ,=\\", "\\ \\,\\=\\\\"),
+    ("escape key-value pair", "key=\"value\"", "key\\=\"value\""),
+]
+
+
+@pytest.mark.parametrize("msg,inp,exp", cases_dimension_values,
+                         ids=[x[0] for x in cases_dimension_values])
+def test_parametrized_normalize_dimension_value(msg, inp, exp):
+    assert dms._normalize_dimension_value(inp) == exp

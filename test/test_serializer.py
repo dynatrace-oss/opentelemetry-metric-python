@@ -171,6 +171,26 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
             "", result
         )
 
+    def test_write_valid_dimensions(self):
+        dimensions = [("dim1", "value1"), ("dim2", "value2")]
+        target = []
+        serializer.DynatraceMetricsSerializer._write_dimensions(target,
+                                                                dimensions)
+
+        # 8 because the commas and the equal signs are separate strings
+        self.assertEqual(8, len(target))
+        self.assertEqual(",dim1=value1,dim2=value2", "".join(target))
+
+    def test_write_invalid_dimensions(self):
+        dimensions = [(":mydim==$", "**_val"), ("!dim.3", "= \",")]
+        target = []
+        serializer.DynatraceMetricsSerializer._write_dimensions(target,
+                                                                dimensions)
+
+        # 8 because the commas and the equal signs are separate strings
+        self.assertEqual(8, len(target))
+        self.assertEqual(",mydim_=**_val,dim=\\=\\ \"\\,", "".join(target))
+
 
 class DummyMetric:
     def __init__(self, name: str):
