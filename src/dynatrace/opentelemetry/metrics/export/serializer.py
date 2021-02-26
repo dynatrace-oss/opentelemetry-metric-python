@@ -167,11 +167,19 @@ class DynatraceMetricsSerializer:
             metric_key = self._prefix + "." + metric_key
         return DynatraceMetricsSerializer._normalize_metric_key(metric_key)
 
-    @classmethod
-    def _normalize_metric_key(cls, key: str) -> str:
-        # truncate to maximum length.
-        key = key[:cls.__mk_max_length]
+    # characters not valid to start the first identifier key section
+    __re_metric_key_first_identifier_section_start = re.compile(r"^[^a-zA-Z_]+")
 
+    # characters not valid to start subsequent identifier key sections
+    __re_metric_key_identifier_section_start = re.compile(r"^[^a-zA-Z0-9_]+")
+
+    # for the rest of the metric key characters, alphanumeric characters as
+    # well as hyphens and underscores are allowed. consecutive invalid
+    # characters will be condensed into one underscore.
+    __re_metric_key_invalid_characters = re.compile(r"[^a-zA-Z0-9_\-]+")
+
+    @staticmethod
+    def _normalize_metric_key(key: str) -> str:
         first, *rest = key.split(".")
 
         first = (DynatraceMetricsSerializer.
@@ -232,6 +240,44 @@ class DynatraceMetricsSerializer:
 
         return section
 
+    __dimension_key_max_length = 100
+
+    @classmethod
+    def _normalize_dimension_key(cls, key: str):
+        # truncate dimension key to max length.
+        key = key[:cls.__dimension_key_max_length]
+
+        # separate sections
+        sections = key.split(".")
+        # normalize them and drop empty sections using filter
+        normalized = list(filter(None, map(
+            DynatraceMetricsSerializer.__normalize_dimension_key_section,
+            sections
+        )))
+
+        return ".".join(normalized)
+
+    # dimension keys have to start with a lowercase letter or an underscore.
+    __re_dimension_key_start = re.compile(r"^[^a-z_]+")
+    __re_dimension_key_end = re.compile(r"[^a-z0-9_\-:]+$")
+
+    # other valid characters in dimension keys are lowercase letters, numbers,
+    # colons, underscores and hyphens.
+    __re_dimension_key_invalid_chars = re.compile(r"[^a-z0-9_\-:]+")
+
+    @classmethod
+    def __normalize_dimension_key_section(cls, section: str):
+        # convert to lowercase
+        section = section.lower()
+        # delete leading invalid characters
+        section = cls.__re_dimension_key_start.sub("", section)
+        # delete trailing invalid characters
+        section = cls.__re_dimension_key_end.sub("", section)
+        # replace consecutive invalid characters with one underscore:
+        section = cls.__re_dimension_key_invalid_chars.sub("_", section)
+
+        return section
+
     @staticmethod
     def _write_dimensions(
         string_buffer: List[str], dimensions: Iterable[Tuple[str, str]]
@@ -267,6 +313,8 @@ class DynatraceMetricsSerializer:
         # and replace enclosed ranges of null chars with one underscore.
         s = cls.__re_dv_cc.sub("_", s)
         return s
+
+    __metric_value_max_length = 250
 
     @classmethod
     def _normalize_dimension_value(cls, value: str):

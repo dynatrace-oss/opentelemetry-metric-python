@@ -74,6 +74,8 @@ cases_metric_keys = [
 ]
 
 
+
+
 @pytest.mark.parametrize("msg,inp,exp", cases_metric_keys,
                          ids=[x[0] for x in cases_metric_keys])
 def test_parametrized_normalize_metric_key(msg, inp, exp):
@@ -100,6 +102,9 @@ cases_dimension_keys = [
     ("invalid chars", "~@#ä", ""),
     ("invalid trailing chars", "aaa~@#ä", "aaa"),
     ("valid trailing underscores", "aaa___", "aaa___"),
+    ("invalid leading multiple hyphens", "---dim", "dim"),
+    ("invalid leading colon", ":dim", "dim"),
+    ("invalid chars", "~@#ä", ""),
     ("invalid only numbers", "000", ""),
     ("valid compound key", "dim1.value1", "dim1.value1"),
     ("invalid compound leading number", "dim.0dim", "dim.dim"),
