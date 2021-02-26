@@ -129,11 +129,22 @@ class DynatraceMetricsSerializer:
             metric_key = self._prefix + "." + metric_key
         return DynatraceMetricsSerializer._normalize_metric_key(metric_key)
 
+    # characters not valid to start the first identifier key section
+    __re_metric_key_first_identifier_section_start = re.compile(r"^[^a-zA-Z_]+")
+
+    # characters not valid to start subsequent identifier key sections
+    __re_metric_key_identifier_section_start = re.compile(r"^[^a-zA-Z0-9_]+")
+
+    # for the rest of the metric key characters, alphanumeric characters as
+    # well as hyphens and underscores are allowed. consecutive invalid
+    # characters will be condensed into one underscore.
+    __re_metric_key_invalid_characters = re.compile(r"[^a-zA-Z0-9_\-]+")
+
     @staticmethod
     def _normalize_metric_key(key: str) -> str:
         first, *rest = key.split(".")
 
-        first = DynatraceMetricsSerializer._normalize_metric_key_first_section(
+        first = DynatraceMetricsSerializer.__normalize_metric_key_first_section(
             first
         )
 
@@ -141,22 +152,24 @@ class DynatraceMetricsSerializer:
             return ""
 
         rest = list(filter(None, map(
-            DynatraceMetricsSerializer._normalize_metric_key_section,
+            DynatraceMetricsSerializer.__normalize_metric_key_section,
             rest,
         )))
 
         return ".".join([x for x in [first] + rest if x != ""])
 
-    @staticmethod
-    def _normalize_metric_key_first_section(section: str) -> str:
-        return DynatraceMetricsSerializer._normalize_metric_key_section(
-            re.sub("^[^a-zA-Z]+", "", section),
+    @classmethod
+    def __normalize_metric_key_first_section(cls, section: str) -> str:
+        return DynatraceMetricsSerializer.__normalize_metric_key_section(
+            # delete invalid characters for first section start
+            cls.__re_metric_key_first_identifier_section_start.sub("", section),
         )
 
-    @staticmethod
-    def _normalize_metric_key_section(section: str) -> str:
-        section = re.sub("^[^a-zA-Z0-9]+", "", section)
-        section = re.sub("[^a-zA-Z0-9_-]+", "_", section)
+    @classmethod
+    def __normalize_metric_key_section(cls, section: str) -> str:
+        # delete invalid characters at the start of the section key
+        section = cls.__re_metric_key_identifier_section_start.sub("", section)
+        section = cls.__re_metric_key_invalid_characters.sub("_", section)
         return section
 
     @staticmethod
