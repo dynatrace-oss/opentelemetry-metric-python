@@ -16,7 +16,7 @@ import pytest
 from dynatrace.opentelemetry.metrics.export.serializer import \
     DynatraceMetricsSerializer as dms
 
-cases = [
+cases_metric_keys = [
     ("valid base case", "basecase", "basecase"),
     ("valid leading underscore", "_basecase", "_basecase"),
     ("valid underscore", "base_case", "base_case"),
@@ -59,6 +59,50 @@ cases = [
 ]
 
 
-@pytest.mark.parametrize("msg,inp,exp", cases, ids = [x[0] for x in cases])
+@pytest.mark.parametrize("msg,inp,exp", cases_metric_keys,
+                         ids=[x[0] for x in cases_metric_keys])
 def test_pytest_normalize_metric_key(msg, inp, exp):
     assert dms._normalize_metric_key(inp) == exp
+
+
+cases_dimension_keys = [
+    ("valid case", "dim", "dim"),
+    ("valid number", "dim1", "dim1"),
+    ("valid leading underscore", "_dim", "_dim"),
+    ("invalid uppercase", "Dim1", "dim1"),
+    ("valid dimension colon", "dim:dim", "dim:dim"),
+    ("valid dimension underscore", "dim_dim", "dim_dim"),
+    ("valid dimension hyphen", "dim-dim", "dim-dim"),
+    ("invalid leading hyphen", "-dim", "dim"),
+    ("invalid leading multiple hyphens", "---dim", "dim"),
+    ("invalid leading colon", ":dim", "dim"),
+    ("invalid chars", "~@#ä", ""),
+    ("invalid only numbers", "000", ""),
+    ("valid compound key", "dim1.value1", "dim1.value1"),
+    ("invalid compound leading number", "dim.0dim", "dim.dim"),
+    ("invalid compound only number", "dim.000", "dim"),
+    ("invalid compound leading invalid char", "dim.~val", "dim.val"),
+    ("invalid compound only invalid char", "dim.~~~", "dim"),
+    ("valid compound leading underscore", "dim._val", "dim._val"),
+    ("valid compound only underscore", "dim.___", "dim.___"),
+    ("valid compound long", "dim.dim.dim.dim", "dim.dim.dim.dim"),
+    ("invalid two dots", "a..b", "a.b"),
+    ("invalid five dots", "a.....b", "a.b"),
+    ("invalid leading dot", ".a", "a"),
+    ("valid colon in compound", "a.b:c.d", "a.b:c.d"),
+    ("invalid trailing dot", "a.", "a"),
+    ("invlid trailing dots", "a...", "a"),
+    ("invalid enclosing dots", ".a.", "a"),
+    ("invalid empty", "", ""),
+    ("valid combined key", "dim.val:count.val001", "dim.val:count.val001"),
+    ("invalid characters", "a,,,b  c=d\\e\\ =,f", "a_b_c_d_e_f"),
+    ("invalid characters long",
+     "a!b\"c#d$e%f&g'h(i)j*k+l,m-n.o/p:q;r<s=t>u?v@w[x]y\\z^0 1_2;3{4|5}6~7",
+     "a_b_c_d_e_f_g_h_i_j_k_l_m-n.o_p:q_r_s_t_u_v_w_x_y_z_0_1_2_3_4_5_6_7"),
+]
+
+
+@pytest.mark.parametrize("msg,inp,exp", cases_dimension_keys,
+                         ids=[x[0] for x in cases_dimension_keys])
+def test_pytest_normalize_dimension_keys(msg, inp, exp):
+    assert dms._normalize_dimension_key(inp) == exp

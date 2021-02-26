@@ -173,6 +173,36 @@ class DynatraceMetricsSerializer:
         return section
 
     @staticmethod
+    def _normalize_dimension_key(key: str):
+        # separate sections
+        sections = key.split(".")
+        # normalize them and drop empty sections using filter
+        normalized = list(filter(None, map(
+            DynatraceMetricsSerializer.__normalize_dimension_key_section,
+            sections
+        )))
+
+        return ".".join(normalized)
+
+    # dimension keys have to start with a lowercase letter or an underscore.
+    __re_dimension_key_start = re.compile(r"^[^a-z_]+")
+
+    # other valid characters in dimension keys are lowercase letters, numbers,
+    # colons, underscores and hyphens.
+    __re_dimension_key_invalid_chars = re.compile(r"[^a-z0-9_\-:]+")
+
+    @classmethod
+    def __normalize_dimension_key_section(cls, section: str):
+        # convert to lowercase
+        section = section.lower()
+        # delete leading invalid characters
+        section = cls.__re_dimension_key_start.sub("", section)
+        # replace consecutive invalid characters with one underscore:
+        section = cls.__re_dimension_key_invalid_chars.sub("_", section)
+
+        return section
+
+    @staticmethod
     def _write_dimensions(
         string_buffer: List[str], dimensions: Iterable[Tuple[str, str]]
     ):
