@@ -133,9 +133,8 @@ class DynatraceMetricsSerializer:
     def _normalize_metric_key(key: str) -> str:
         first, *rest = key.split(".")
 
-        first = DynatraceMetricsSerializer.__normalize_metric_key_first_section(
-            first
-        )
+        first = DynatraceMetricsSerializer. \
+            __normalize_metric_key_first_section(first)
 
         if first == "":
             return ""
@@ -148,7 +147,8 @@ class DynatraceMetricsSerializer:
         return ".".join([x for x in [first] + rest if x != ""])
 
     # characters not valid to start the first identifier key section
-    __re_metric_key_first_identifier_section_start = re.compile(r"^[^a-zA-Z_]+")
+    __re_metric_key_first_identifier_section_start = \
+        re.compile(r"^[^a-zA-Z_]+")
 
     # characters not valid to start subsequent identifier key sections
     __re_metric_key_identifier_section_start = re.compile(r"^[^a-zA-Z0-9_]+")
@@ -162,7 +162,7 @@ class DynatraceMetricsSerializer:
     def __normalize_metric_key_first_section(cls, section: str) -> str:
         return DynatraceMetricsSerializer.__normalize_metric_key_section(
             # delete invalid characters for first section start
-            cls.__re_metric_key_first_identifier_section_start.sub("", section),
+            cls.__re_metric_key_first_identifier_section_start.sub("", section)
         )
 
     @classmethod
@@ -210,7 +210,8 @@ class DynatraceMetricsSerializer:
             dim_key = DynatraceMetricsSerializer._normalize_dimension_key(key)
             if dim_key:
                 dim_value = \
-                    DynatraceMetricsSerializer._normalize_dimension_value(value)
+                    DynatraceMetricsSerializer. \
+                    _normalize_dimension_value(value)
 
                 string_buffer.append(",")
                 string_buffer.append(dim_key)
