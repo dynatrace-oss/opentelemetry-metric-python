@@ -151,10 +151,14 @@ cases_dimension_values = [
     ("escape backslash", "a\\b", "a\\\\b"),
     ("escape multiple invalids", " ,=\\", "\\ \\,\\=\\\\"),
     ("escape key-value pair", "key=\"value\"", "key\\=\"value\""),
+    # \u0000 NUL character, \u0007 bell character
     ("invalid unicode", "\u0000a\u0007", "a"),
     ("invalid unicode space", "a\u0001b", "a_b"),
     # 'Ab' in unicode:
     ("valid unicode", "\u0034\u0066", "\u0034\u0066"),
+    # A umlaut, a with ring, O umlaut, U umlaut, all valid.
+    ("valid unicode", "\u0132_\u0133_\u0150_\u0156",
+     "\u0132_\u0133_\u0150_\u0156"),
     ("invalid leading unicode NUL", "\u0000a", "a"),
     ("invalid trailing unicode NUL", "a\u0000", "a"),
     ("invalid enclosed unicode NUL", "a\u0000b", "a_b"),

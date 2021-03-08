@@ -133,9 +133,9 @@ class DynatraceMetricsSerializer:
     __metric_key_max_length = 250
 
     @classmethod
-    def _normalize_metric_key(self, key: str) -> str:
+    def _normalize_metric_key(cls, key: str) -> str:
         # truncate to maximum length.
-        key = key[:self.__metric_key_max_length]
+        key = key[:cls.__metric_key_max_length]
 
         first, *rest = key.split(".")
 
@@ -166,30 +166,30 @@ class DynatraceMetricsSerializer:
     __re_metric_key_invalid_characters = re.compile(r"[^a-zA-Z0-9_\-]+")
 
     @classmethod
-    def __normalize_metric_key_first_section(self, section: str) -> str:
+    def __normalize_metric_key_first_section(cls, section: str) -> str:
         return DynatraceMetricsSerializer.__normalize_metric_key_section(
             # delete invalid characters for first section start
-            self.__re_metric_key_first_identifier_section_start
-                .sub("", section)
+            cls.__re_metric_key_first_identifier_section_start
+            .sub("", section)
         )
 
     @classmethod
-    def __normalize_metric_key_section(self, section: str) -> str:
+    def __normalize_metric_key_section(cls, section: str) -> str:
         # delete invalid characters at the start of the section key
-        section = self.__re_metric_key_identifier_section_start\
+        section = cls.__re_metric_key_identifier_section_start\
             .sub("", section)
         # delete invalid characters at the end of the section key
-        section = self.__re_metric_key_identifier_section_end.sub("", section)
+        section = cls.__re_metric_key_identifier_section_end.sub("", section)
         # replace ranges of invalid characters in the key with one underscore.
-        section = self.__re_metric_key_invalid_characters.sub("_", section)
+        section = cls.__re_metric_key_invalid_characters.sub("_", section)
         return section
 
     __dimension_key_max_length = 100
 
     @classmethod
-    def _normalize_dimension_key(self, key: str):
+    def _normalize_dimension_key(cls, key: str):
         # truncate dimension key to max length.
-        key = key[:self.__dimension_key_max_length]
+        key = key[:cls.__dimension_key_max_length]
 
         # separate sections
         sections = key.split(".")
@@ -210,15 +210,15 @@ class DynatraceMetricsSerializer:
     __re_dimension_key_invalid_chars = re.compile(r"[^a-z0-9_\-:]+")
 
     @classmethod
-    def __normalize_dimension_key_section(self, section: str):
+    def __normalize_dimension_key_section(cls, section: str):
         # convert to lowercase
         section = section.lower()
         # delete leading invalid characters
-        section = self.__re_dimension_key_start.sub("", section)
+        section = cls.__re_dimension_key_start.sub("", section)
         # delete trailing invalid characters
-        section = self.__re_dimension_key_end.sub("", section)
+        section = cls.__re_dimension_key_end.sub("", section)
         # replace consecutive invalid characters with one underscore:
-        section = self.__re_dimension_key_invalid_chars.sub("_", section)
+        section = cls.__re_dimension_key_invalid_chars.sub("_", section)
 
         return section
 
@@ -255,10 +255,10 @@ class DynatraceMetricsSerializer:
     __metric_value_max_length = 250
 
     @classmethod
-    def _normalize_dimension_value(self, value: str):
-        value = value[:self.__metric_value_max_length]
-        value = self.__re_control_characters_start.sub("", value)
-        value = self.__re_control_characters_end.sub("", value)
-        value = self.__re_control_characters.sub("_", value)
-        value = self.__re_characters_to_escape.sub(r"\\\g<1>", value)
+    def _normalize_dimension_value(cls, value: str):
+        value = value[:cls.__metric_value_max_length]
+        value = cls.__re_control_characters_start.sub("", value)
+        value = cls.__re_control_characters_end.sub("", value)
+        value = cls.__re_control_characters.sub("_", value)
+        value = cls.__re_characters_to_escape.sub(r"\\\g<1>", value)
         return value
