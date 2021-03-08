@@ -12,6 +12,7 @@ setuptools.setup(
     install_requires=[
         "opentelemetry-api==0.15b0",
         "opentelemetry-sdk==0.15b0",
-        "requests~=2.25"
+        "requests~=2.25", 
+        "regex~=2020.11.13"
     ]
 )

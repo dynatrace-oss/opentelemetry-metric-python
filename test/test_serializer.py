@@ -189,7 +189,7 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
 
         # 8 because the commas and the equal signs are separate strings
         self.assertEqual(8, len(target))
-        self.assertEqual(",mydim_=**_val,dim=\\=\\ \"\\,", "".join(target))
+        self.assertEqual(",mydim=**_val,dim=\\=\\ \"\\,", "".join(target))
 
 
 class DummyMetric:

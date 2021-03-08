@@ -48,6 +48,8 @@ cases_metric_keys = [
     ("invalid enclosing dots", ".a.", ""),
     ("valid consecutive leading underscores", "___a", "___a"),
     ("valid consecutive trailing underscores", "a___", "a___"),
+    ("invalid delete trailing invalid chars", "a$%@", "a"),
+    ("invalid delete trailing invalid chars groups", "a.b$%@.c", "a.b.c"),
     ("valid consecutive enclosed underscores", "a___b", "a___b"),
     ("invalid mixture dots underscores", "._._._a_._._.", ""),
     ("valid mixture dots underscores 2", "_._._.a_._", "_._._.a_._"),
@@ -59,6 +61,13 @@ cases_metric_keys = [
     ("invalid trailing characters", "a.b.+", "a.b"),
     ("valid combined test", "metric.key-number-1.001",
      "metric.key-number-1.001"),
+    ("valid example 1", "MyMetric", "MyMetric"),
+    ("invalid example 1", "0MyMetric", "MyMetric"),
+    ("invalid example 2", "mÄtric", "m_tric"),
+    ("invalid example 3", "metriÄ", "metri"),
+    ("invalid example 4", "Ätric", "tric"),
+    ("invalid example 5", "meträääääÖÖÖc", "metr_c"),
+    ("invalid truncate key too long", "a" * 270, "a" * 250),
 ]
 
 
@@ -84,11 +93,14 @@ cases_dimension_keys = [
     ("invalid leading multiple hyphens", "---dim", "dim"),
     ("invalid leading colon", ":dim", "dim"),
     ("invalid chars", "~@#ä", ""),
+    ("invalid trailing chars", "aaa~@#ä", "aaa"),
+    ("valid trailing underscores", "aaa___", "aaa___"),
     ("invalid only numbers", "000", ""),
     ("valid compound key", "dim1.value1", "dim1.value1"),
     ("invalid compound leading number", "dim.0dim", "dim.dim"),
     ("invalid compound only number", "dim.000", "dim"),
     ("invalid compound leading invalid char", "dim.~val", "dim.val"),
+    ("invalid compound trailing invalid char", "dim.val~~", "dim.val"),
     ("invalid compound only invalid char", "dim.~~~", "dim"),
     ("valid compound leading underscore", "dim._val", "dim._val"),
     ("valid compound only underscore", "dim.___", "dim.___"),
@@ -99,10 +111,10 @@ cases_dimension_keys = [
     ("valid colon in compound", "a.b:c.d", "a.b:c.d"),
     ("invalid trailing dot", "a.", "a"),
     ("invalid just a dot", ".", ""),
-    ("invlid trailing dots", "a...", "a"),
+    ("invalid trailing dots", "a...", "a"),
     ("invalid enclosing dots", ".a.", "a"),
     ("invalid leading whitespace", "   a", "a"),
-    ("invalid trailing whitespace", "a   ", "a_"),
+    ("invalid trailing whitespace", "a   ", "a"),
     ("invalid internal whitespace", "a b", "a_b"),
     ("invalid internal whitespace", "a    b", "a_b"),
     ("invalid empty", "", ""),
@@ -111,6 +123,14 @@ cases_dimension_keys = [
     ("invalid characters long",
      "a!b\"c#d$e%f&g'h(i)j*k+l,m-n.o/p:q;r<s=t>u?v@w[x]y\\z^0 1_2;3{4|5}6~7",
      "a_b_c_d_e_f_g_h_i_j_k_l_m-n.o_p:q_r_s_t_u_v_w_x_y_z_0_1_2_3_4_5_6_7"),
+    ("invalid example 1", "Tag", "tag"),
+    ("invalid example 2", "0Tag", "tag"),
+    ("invalid example 3", "tÄg", "t_g"),
+    ("invalid example 4", "mytäääg", "myt_g"),
+    ("invalid example 5", "ääätag", "tag"),
+    ("invalid example 6", "ä_ätag", "__tag"),
+    ("invalid example 7", "Bla___", "bla___"),
+    ("invalid truncate key too long", "a" * 120, "a" * 100),
 ]
 
 
@@ -131,6 +151,14 @@ cases_dimension_values = [
     ("escape backslash", "a\\b", "a\\\\b"),
     ("escape multiple invalids", " ,=\\", "\\ \\,\\=\\\\"),
     ("escape key-value pair", "key=\"value\"", "key\\=\"value\""),
+    ("invalid unicode", "\u0000a\u0007", "a"),
+    ("invalid unicode space", "a\u0001b", "a_b"),
+    # 'Ab' in unicode:
+    ("valid unicode", "\u0034\u0066", "\u0034\u0066"),
+    ("invalid leading unicode NUL", "\u0000a", "a"),
+    ("invalid trailing unicode NUL", "a\u0000", "a"),
+    ("invalid enclosed unicode NUL", "a\u0000b", "a_b"),
+    ("invalid truncate value too long", "a" * 270, "a" * 250),
 ]
 
 
