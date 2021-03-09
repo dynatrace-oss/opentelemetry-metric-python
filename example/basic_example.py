@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import random
 import time
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
@@ -19,15 +19,24 @@ from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
 from os.path import splitext, basename
 import argparse
+import logging
+
+
+def get_random_number(maximum: int, minimum: int = 0):
+    if maximum < minimum:
+        minimum, maximum = maximum, minimum
+
+    return random.randint(minimum, maximum)
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Example exporting metrics using the Dynatrace metrics "
                     "exporter.",
-        epilog="The script can be run without any arguments. In that case, "
-               "the local OneAgent is used as an endpoint, if it is installed.")
-    parser.add_argument("-e", "--endpoint", default=None, type=str, dest="endpoint",
+        epilog="The script can be run without any arguments. In that case, the"
+               " local OneAgent is used as an endpoint, if it is installed.")
+    parser.add_argument("-e", "--endpoint", default=None, type=str,
+                        dest="endpoint",
                         help="The endpoint url used to export metrics to. "
                              "This can be either a Dynatrace metrics "
                              "ingestion endpoint, or a local OneAgent "
@@ -64,16 +73,22 @@ if __name__ == '__main__':
 
     if not args.endpoint:
         print("No Dynatrace endpoint specified, exporting to default local "
-              "OneAgent ingest endpoint.")
+              "OneAgent endpoint.")
 
-    # set up opentelemetry for export:
+    logging.basicConfig(level=logging.INFO)
+    # set up OpenTelemetry for export:
+    logging.info("setting up global OpenTelemetry configuration.")
     metrics.set_meter_provider(MeterProvider())
     meter = metrics.get_meter(splitext(basename(__file__))[0])
 
+    logging.info("setting up Dynatrace metrics exporting interface.")
     exporter = DynatraceMetricsExporter(args.endpoint, args.token,
                                         prefix="otel.python",
-                                        export_oneagent_metadata=args.metadata_enrichment)
+                                        export_oneagent_metadata=args.
+                                        metadata_enrichment)
 
+    logging.info("registering Dynatrace exporter with the global OpenTelemetry"
+                 " instance...")
     # This call registers the meter and exporter with the global
     # MeterProvider set above. All instruments created by the meter that is
     # registered here will export to the Dynatrace metrics exporter. It is a
@@ -82,6 +97,7 @@ if __name__ == '__main__':
     # the same Dynatrace metrics exporter.
     metrics.get_meter_provider().start_pipeline(meter, exporter, args.interval)
 
+    logging.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
         name="requests",
         description="number of requests",
@@ -96,25 +112,23 @@ if __name__ == '__main__':
         value_type=int,
     )
 
-    # Labels are used to identify key-values that are associated with a specific
-    # metric that you want to record. These are useful for pre-aggregation and
-    # can be used to store custom dimensions pertaining to a metric
+    # Labels are used to identify key-values that are associated with a
+    # specific metric that you want to record. These are useful for
+    # pre-aggregation and can be used to store custom dimensions pertaining
+    # to a metric
     staging_labels = {"environment": "staging"}
     testing_labels = {"environment": "testing"}
 
+    logging.info("starting instrumented application...")
     try:
         while True:
+            logging.info("working and recording some info...")
             # Update the metric instruments using the direct calling convention
-            requests_counter.add(25, staging_labels)
-            requests_size.record(100, staging_labels)
-            time.sleep(5)
+            requests_counter.add(get_random_number(25), staging_labels)
+            requests_size.record(get_random_number(300), staging_labels)
 
-            requests_counter.add(50, staging_labels)
-            requests_size.record(5000, staging_labels)
-            time.sleep(5)
-
-            requests_counter.add(35, testing_labels)
-            requests_size.record(2, testing_labels)
+            requests_counter.add(get_random_number(35), testing_labels)
+            requests_size.record(get_random_number(100), testing_labels)
             time.sleep(5)
 
     except KeyboardInterrupt:

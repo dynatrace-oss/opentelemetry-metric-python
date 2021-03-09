@@ -71,8 +71,22 @@ class DynatraceMetricsSerializer:
         tags: Optional[Mapping],
     ):
         self._prefix = prefix
-        self._tags = tags or {}
         self._is_delta_export = None
+
+        self._tags = self._normalize_tags(tags)
+
+    @classmethod
+    def _normalize_tags(cls, tags):
+        tag_dict = {}
+        if tags:
+            # normalize the tags once, so it doesnt have to be repeated for
+            # every serialisation
+            for k, v in tags.items():
+                key = cls._normalize_dimension_key(k)
+                if key:
+                    tag_dict[key] = cls._normalize_dimension_value(v)
+
+        return tag_dict
 
     def serialize_records(
         self, records: Sequence[MetricRecord]
@@ -101,9 +115,11 @@ class DynatraceMetricsSerializer:
         if metric_key == "":
             return
         string_buffer.append(metric_key)
-        self._write_dimensions(string_buffer, record.labels)
-        if self._tags:
-            self._write_dimensions(string_buffer, self._tags.items())
+
+        unique_dimensions = self._make_unique_dimensions(record.labels,
+                                                         self._tags.items())
+        DynatraceMetricsSerializer._write_dimensions(string_buffer,
+                                                     unique_dimensions)
 
         serialize_func(string_buffer, aggregator)
 
@@ -280,20 +296,15 @@ class DynatraceMetricsSerializer:
 
     @staticmethod
     def _write_dimensions(
-        string_buffer: List[str], dimensions: Iterable[Tuple[str, str]]
+        string_buffer: List[str], dimensions: Mapping[str, str]
     ):
-        for key, value in dimensions:
-            dim_key = DynatraceMetricsSerializer._normalize_dimension_key(key)
-            if dim_key:
-                dim_value = (DynatraceMetricsSerializer.
-                             _normalize_dimension_value(value))
-
-                string_buffer.append(",")
-                string_buffer.append(dim_key)
-                string_buffer.append("=")
-                string_buffer.append(dim_value)
-
-            # else: the dimension is empty, the dimension is dropped.
+        # when the calling function uses make unique dimensions first, keys and
+        # values are already normalized to ensure correct duplicate elimination
+        for k, v in dimensions.items():
+            string_buffer.append(",")
+            string_buffer.append(k)
+            string_buffer.append("=")
+            string_buffer.append(v)
 
     @staticmethod
     def _write_timestamp(sb: List[str], aggregator: aggregate.Aggregator):
@@ -322,3 +333,22 @@ class DynatraceMetricsSerializer:
         value = DynatraceMetricsSerializer._remove_control_characters(value)
         value = cls.__re_dv_escape_chars.sub(r"\\\g<1>", value)
         return value
+
+    @classmethod
+    def _make_unique_dimensions(cls, labels: Iterable[Tuple[str, str]],
+                                tags: Iterable[Tuple[str, str]]):
+        dims_map = {}
+        if labels:
+            for k, v in labels:
+                key = cls._normalize_dimension_key(k)
+                if key:
+                    dims_map[key] = cls._normalize_dimension_value(v)
+
+        # overwrite tags that the user set with the static tags and OneAgent
+        # metadata. Tags are normalized in __init__ so they don't have to be
+        # re-normalized here.
+        if tags:
+            for k, v in tags:
+                dims_map[k] = v
+
+        return dims_map
