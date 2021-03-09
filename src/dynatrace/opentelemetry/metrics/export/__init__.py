@@ -66,7 +66,12 @@ class DynatraceMetricsExporter(MetricsExporter):
             "Content-Type": "text/plain; charset=utf-8",
         }
         if api_token:
-            self._headers["Authorization"] = "Api-Token " + api_token
+            if not endpoint_url:
+                self.__logger.warning("Just API token but no endpoint passed. "
+                                      "Skipping token authentication for local"
+                                      " OneAgent endpoint")
+            else:
+                self._headers["Authorization"] = "Api-Token " + api_token
 
     def export(
         self, metric_records: Sequence[MetricRecord]
