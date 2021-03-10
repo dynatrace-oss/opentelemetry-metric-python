@@ -171,38 +171,25 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
             "", result
         )
 
-    def test_normalize_metric_key(self):
-        cases = [
-            ["basecase", "basecase"],
-            ["prefix.case", "prefix.case"],
-            ["", ""],
-            ["0", ""],
-            ["0.section", ""],
-            ["just.a.normal.key", "just.a.normal.key"],
-			["Case", "Case"],
-			["~0something", "something"],
-			["some~thing", "some_thing"],
-			["some~ä#thing", "some_thing"],
-			["a..b", "a.b"],
-			["a.....b", "a.b"],
-			["asd", "asd"],
-			[".", ""],
-			[".a", ""],
-			["a.", "a"],
-			[".a.", ""],
-			["_a", "a"],
-			["a_", "a_"],
-			["_a_", "a_"],
-			[".a_", ""],
-			["_a.", "a"],
-			["._._a_._._", ""],
-			["test..empty.test", "test.empty.test"],
-			["a,,,b  c=d\\e\\ =,f", "a_b_c_d_e_f"],
-			["a!b\"c#d$e%f&g'h(i)j*k+l,m-n.o/p:q;r<s=t>u?v@w[x]y\\z^0 1_2;3{4|5}6~7", "a_b_c_d_e_f_g_h_i_j_k_l_m-n.o_p_q_r_s_t_u_v_w_x_y_z_0_1_2_3_4_5_6_7"],
-        ]
-        for case in cases:
-            self.assertEqual(
-                serializer.DynatraceMetricsSerializer._normalize_metric_key(case[0]), case[1])
+    def test_write_valid_dimensions(self):
+        dimensions = [("dim1", "value1"), ("dim2", "value2")]
+        target = []
+        serializer.DynatraceMetricsSerializer._write_dimensions(target,
+                                                                dimensions)
+
+        # 8 because the commas and the equal signs are separate strings
+        self.assertEqual(8, len(target))
+        self.assertEqual(",dim1=value1,dim2=value2", "".join(target))
+
+    def test_write_invalid_dimensions(self):
+        dimensions = [(":mydim==$", "**_val"), ("!dim.3", "= \",")]
+        target = []
+        serializer.DynatraceMetricsSerializer._write_dimensions(target,
+                                                                dimensions)
+
+        # 8 because the commas and the equal signs are separate strings
+        self.assertEqual(8, len(target))
+        self.assertEqual(",mydim=**_val,dim=\\=\\ \"\\,", "".join(target))
 
 
 class DummyMetric:
