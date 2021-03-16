@@ -21,7 +21,6 @@ from dynatrace.opentelemetry.metrics.export import OneAgentMetadataEnricher
 
 
 class TestOneAgentMetadataEnricher(unittest.TestCase):
-    __logger = logging.Logger(__name__)
 
     def test_parse_oneagent_metadata(self):
         enricher = OneAgentMetadataEnricher()

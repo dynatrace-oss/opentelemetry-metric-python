@@ -20,7 +20,7 @@ from opentelemetry.sdk.metrics import MeterProvider
 from os.path import splitext, basename
 import argparse
 import logging
-
+import os
 
 def get_random_number(maximum: int, minimum: int = 0):
     if maximum < minimum:
@@ -71,11 +71,15 @@ def parse_arguments():
 if __name__ == '__main__':
     args = parse_arguments()
 
+    # try to read the log level from the envrionment variable "LOGLEVEL" and
+    # setting it to "INFO" if not found.
+    loglevel = os.environ.get("LOGLEVEL", "INFO").upper()
+    logging.basicConfig(level=loglevel)
+
     if not args.endpoint:
-        print("No Dynatrace endpoint specified, exporting to default local "
+        logging.warning("No Dynatrace endpoint specified, exporting to default local "
               "OneAgent endpoint.")
 
-    logging.basicConfig(level=logging.INFO)
     # set up OpenTelemetry for export:
     logging.info("setting up global OpenTelemetry configuration.")
     metrics.set_meter_provider(MeterProvider())
@@ -122,7 +126,6 @@ if __name__ == '__main__':
     logging.info("starting instrumented application...")
     try:
         while True:
-            logging.info("working and recording some info...")
             # Update the metric instruments using the direct calling convention
             requests_counter.add(get_random_number(25), staging_labels)
             requests_size.record(get_random_number(300), staging_labels)

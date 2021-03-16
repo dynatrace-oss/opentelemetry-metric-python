@@ -36,7 +36,6 @@ class DynatraceMetricsExporter(MetricsExporter):
     -------
     export(metric_records: Sequence[MetricRecord])
     """
-    __logger = logging.Logger(__name__)
 
     def __init__(
         self,
@@ -49,8 +48,8 @@ class DynatraceMetricsExporter(MetricsExporter):
         if endpoint_url:
             self._endpoint_url = endpoint_url
         else:
-            self.__logger.info("No Dynatrace endpoint specified, exporting "
-                               "to default local OneAgent ingest endpoint.")
+            logging.info("No Dynatrace endpoint specified, exporting "
+                         "to default local OneAgent ingest endpoint.")
             self._endpoint_url = "http://localhost:14499/metrics/ingest"
 
         all_dimensions = dimensions or {}
@@ -67,9 +66,9 @@ class DynatraceMetricsExporter(MetricsExporter):
         }
         if api_token:
             if not endpoint_url:
-                self.__logger.warning("Just API token but no endpoint passed. "
-                                      "Skipping token authentication for local"
-                                      " OneAgent endpoint")
+                logging.warning("Just API token but no endpoint passed. "
+                                "Skipping token authentication for local"
+                                " OneAgent endpoint")
             else:
                 self._headers["Authorization"] = "Api-Token " + api_token
 
@@ -95,6 +94,7 @@ class DynatraceMetricsExporter(MetricsExporter):
             Indicates SUCCESS or FAILURE
         """
         serialized_records = self._serializer.serialize_records(metric_records)
+        logging.debug(serialized_records)
         if not serialized_records:
             return MetricsExportResult.SUCCESS
 
@@ -106,6 +106,6 @@ class DynatraceMetricsExporter(MetricsExporter):
             ) as resp:
                 resp.raise_for_status()
         except Exception as ex:
-            self.__logger.warning("Failed to export metrics: %s", ex)
+            logging.warning("Failed to export metrics: %s", ex)
             return MetricsExportResult.FAILURE
         return MetricsExportResult.SUCCESS
