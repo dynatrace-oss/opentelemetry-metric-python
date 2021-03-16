@@ -13,7 +13,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertNotIn("Authorization", exporter._headers)
         serializer = exporter._serializer
         self.assertEqual(None, serializer._prefix)
-        self.assertDictEqual({}, serializer._tags)
+        self.assertDictEqual({}, serializer._dimensions)
 
     def test_with_endpoint(self):
         endpoint = "https://abc1234.dynatrace.com/metrics/ingest"
@@ -24,7 +24,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertNotIn("Authorization", exporter._headers)
         serializer = exporter._serializer
         self.assertEqual(None, serializer._prefix)
-        self.assertDictEqual({}, serializer._tags)
+        self.assertDictEqual({}, serializer._dimensions)
 
     def test_with_endpoint_and_token(self):
         endpoint = "https://abc1234.dynatrace.com/metrics/ingest"
@@ -38,7 +38,7 @@ class TestExporterCreation(unittest.TestCase):
                          exporter._headers["Authorization"])
         serializer = exporter._serializer
         self.assertEqual(None, serializer._prefix)
-        self.assertDictEqual({}, serializer._tags)
+        self.assertDictEqual({}, serializer._dimensions)
 
     def test_with_only_token(self):
         token = "my.secret.token"
@@ -50,7 +50,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertNotIn("Authorization", exporter._headers)
         serializer = exporter._serializer
         self.assertEqual(None, serializer._prefix)
-        self.assertDictEqual({}, serializer._tags)
+        self.assertDictEqual({}, serializer._dimensions)
 
     def test_with_prefix(self):
         prefix = "test_prefix"
@@ -61,16 +61,16 @@ class TestExporterCreation(unittest.TestCase):
 
     def test_with_tags(self):
         tags = {"tag1": "tv1", "tag2": "tv2"}
-        exporter = DynatraceMetricsExporter(tags=tags)
+        exporter = DynatraceMetricsExporter(dimensions=tags)
 
         serializer = exporter._serializer
-        self.assertEqual(tags, serializer._tags)
+        self.assertEqual(tags, serializer._dimensions)
 
     def test_with_none_tags(self):
-        exporter = DynatraceMetricsExporter(tags=None)
+        exporter = DynatraceMetricsExporter(dimensions=None)
 
         serializer = exporter._serializer
-        self.assertEqual({}, serializer._tags)
+        self.assertEqual({}, serializer._dimensions)
 
     @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
            '.OneAgentMetadataEnricher._get_metadata_file_content')
@@ -82,7 +82,7 @@ class TestExporterCreation(unittest.TestCase):
 
         exporter = DynatraceMetricsExporter(export_oneagent_metadata=True)
         serializer = exporter._serializer
-        self.assertEqual(expected, serializer._tags)
+        self.assertEqual(expected, serializer._dimensions)
 
     @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
            '.OneAgentMetadataEnricher._get_metadata_file_content')
@@ -91,7 +91,7 @@ class TestExporterCreation(unittest.TestCase):
 
         exporter = DynatraceMetricsExporter(export_oneagent_metadata=True)
         serializer = exporter._serializer
-        self.assertEqual({}, serializer._tags)
+        self.assertEqual({}, serializer._dimensions)
 
     @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
            '.OneAgentMetadataEnricher._get_metadata_file_content')
@@ -104,10 +104,10 @@ class TestExporterCreation(unittest.TestCase):
                     "oneagenttag1": "oneagentvalue1",
                     "oneagenttag2": "oneagentvalue2"}
 
-        exporter = DynatraceMetricsExporter(tags=tags,
+        exporter = DynatraceMetricsExporter(dimensions=tags,
                                             export_oneagent_metadata=True)
         serializer = exporter._serializer
-        self.assertEqual(expected, serializer._tags)
+        self.assertEqual(expected, serializer._dimensions)
 
     @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
            '.OneAgentMetadataEnricher._get_metadata_file_content')
@@ -120,10 +120,10 @@ class TestExporterCreation(unittest.TestCase):
                     "oneagenttag1": "oneagentvalue1",
                     "oneagenttag2": "oneagentvalue2"}
 
-        exporter = DynatraceMetricsExporter(tags=tags,
+        exporter = DynatraceMetricsExporter(dimensions=tags,
                                             export_oneagent_metadata=True)
         serializer = exporter._serializer
-        self.assertEqual(expected, serializer._tags)
+        self.assertEqual(expected, serializer._dimensions)
 
 
 if __name__ == '__main__':

@@ -68,25 +68,25 @@ class DynatraceMetricsSerializer:
     def __init__(
         self,
         prefix: Optional[str],
-        tags: Optional[Mapping],
+        dimensions: Optional[Mapping],
     ):
         self._prefix = prefix
         self._is_delta_export = None
 
-        self._tags = self._normalize_tags(tags)
+        self._dimensions = self._normalize_dimensions(dimensions)
 
     @classmethod
-    def _normalize_tags(cls, tags):
-        tag_dict = {}
-        if tags:
-            # normalize the tags once, so it doesnt have to be repeated for
-            # every serialisation
-            for k, v in tags.items():
+    def _normalize_dimensions(cls, dimensions):
+        dim_dict = {}
+        if dimensions:
+            # normalize the dimensions once, so it doesnt have to be repeated
+            # for every serialisation
+            for k, v in dimensions.items():
                 key = cls._normalize_dimension_key(k)
                 if key:
-                    tag_dict[key] = cls._normalize_dimension_value(v)
+                    dim_dict[key] = cls._normalize_dimension_value(v)
 
-        return tag_dict
+        return dim_dict
 
     def serialize_records(
         self, records: Sequence[MetricRecord]
@@ -117,7 +117,8 @@ class DynatraceMetricsSerializer:
         string_buffer.append(metric_key)
 
         unique_dimensions = self._make_unique_dimensions(record.labels,
-                                                         self._tags.items())
+                                                         self._dimensions.
+                                                         items())
         DynatraceMetricsSerializer._write_dimensions(string_buffer,
                                                      unique_dimensions)
 
@@ -284,7 +285,7 @@ class DynatraceMetricsSerializer:
 
     @classmethod
     def _make_unique_dimensions(cls, labels: Iterable[Tuple[str, str]],
-                                tags: Iterable[Tuple[str, str]]):
+                                dimensions: Iterable[Tuple[str, str]]):
         dims_map = {}
         if labels:
             for k, v in labels:
@@ -292,11 +293,11 @@ class DynatraceMetricsSerializer:
                 if key:
                     dims_map[key] = cls._normalize_dimension_value(v)
 
-        # overwrite tags that the user set with the static tags and OneAgent
-        # metadata. Tags are normalized in __init__ so they don't have to be
-        # re-normalized here.
-        if tags:
-            for k, v in tags:
+        # overwrite dimensions that the user set with the default dimensions
+        # and OneAgent metadata. Tags are normalized in __init__ so they
+        # don't have to be re-normalized here.
+        if dimensions:
+            for k, v in dimensions:
                 dims_map[k] = v
 
         return dims_map

@@ -43,7 +43,7 @@ class DynatraceMetricsExporter(MetricsExporter):
         endpoint_url: Optional[str] = None,
         api_token: Optional[str] = None,
         prefix: Optional[str] = None,
-        tags: Optional[Mapping[str, str]] = None,
+        dimensions: Optional[Mapping[str, str]] = None,
         export_oneagent_metadata: Optional[bool] = False,
     ):
         if endpoint_url:
@@ -53,13 +53,13 @@ class DynatraceMetricsExporter(MetricsExporter):
                                "to default local OneAgent ingest endpoint.")
             self._endpoint_url = "http://localhost:14499/metrics/ingest"
 
-        all_tags = tags or {}
+        all_dimensions = dimensions or {}
 
         if export_oneagent_metadata:
             enricher = OneAgentMetadataEnricher()
-            enricher.add_oneagent_metadata_to_tags(all_tags)
+            enricher.add_oneagent_metadata_to_dimensions(all_dimensions)
 
-        self._serializer = DynatraceMetricsSerializer(prefix, all_tags)
+        self._serializer = DynatraceMetricsSerializer(prefix, all_dimensions)
         self._session = requests.Session()
         self._headers = {
             "Accept": "*/*; q=0",

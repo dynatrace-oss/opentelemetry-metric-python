@@ -213,28 +213,28 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
 
         self.assertDictEqual(expected, got)
 
-    def test_normalize_tags(self):
+    def test_normalize_dimensions(self):
         tags = {"tag1": "tv1", "tag2": "tv2"}
 
-        got = serializer.DynatraceMetricsSerializer._normalize_tags(tags)
+        got = serializer.DynatraceMetricsSerializer._normalize_dimensions(tags)
         self.assertDictEqual(tags, got)
 
-    def test_normalize_tags_invalid(self):
+    def test_normalize_dimensions_invalid(self):
         tags = {"@!#~tag1": "  \"val\"", "%%tag2@@": "", "": "empty"}
         expected = {"tag1": "\\ \\ \"val\"", "tag2": ""}
 
-        got = serializer.DynatraceMetricsSerializer._normalize_tags(tags)
+        got = serializer.DynatraceMetricsSerializer._normalize_dimensions(tags)
         self.assertDictEqual(expected, got)
 
-    def test_normalize_tags_pass_none_or_empty(self):
+    def test_normalize_dimensions_pass_none_or_empty(self):
         expected = {}
         tags1 = None
 
-        got1 = serializer.DynatraceMetricsSerializer._normalize_tags(tags1)
+        got1 = serializer.DynatraceMetricsSerializer._normalize_dimensions(tags1)
         self.assertDictEqual(expected, got1)
 
         tags2 = {}
-        got2 = serializer.DynatraceMetricsSerializer._normalize_tags(tags2)
+        got2 = serializer.DynatraceMetricsSerializer._normalize_dimensions(tags2)
         self.assertDictEqual(expected, got2)
 
 
