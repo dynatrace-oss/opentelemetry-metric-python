@@ -221,18 +221,18 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
 
     def test_normalize_tags_invalid(self):
         tags = {"@!#~tag1": "  \"val\"", "%%tag2@@": "", "": "empty"}
-        expected = {"tag1": "\\ \\ \"val\"", "tag2_": ""}
+        expected = {"tag1": "\\ \\ \"val\"", "tag2": ""}
 
         got = serializer.DynatraceMetricsSerializer._normalize_tags(tags)
         self.assertDictEqual(expected, got)
-        
+
     def test_normalize_tags_pass_none_or_empty(self):
         expected = {}
         tags1 = None
 
         got1 = serializer.DynatraceMetricsSerializer._normalize_tags(tags1)
         self.assertDictEqual(expected, got1)
-        
+
         tags2 = {}
         got2 = serializer.DynatraceMetricsSerializer._normalize_tags(tags2)
         self.assertDictEqual(expected, got2)
