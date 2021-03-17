@@ -10,6 +10,8 @@ See [open-telemetry/opentelemetry-python](https://github.com/open-telemetry/open
 
 ## Getting started
 
+### Usage
+
 The general setup of OpenTelemetry Python is explained in the official [Getting Started Guide](https://opentelemetry-python.readthedocs.io/en/stable/getting-started.html).
 
 ```python
@@ -32,7 +34,21 @@ counter = meter.create_counter(
 counter.add(25, {"dimension-1", "value-1"})
 ```
 
-Full setup examples can be found [here](example/).
+### Example
+
+To run the [example](example/basic_example.py), clone this repository and change to the `opentelemetry-metric-python` folder, then run:
+
+```shell
+pip install .                       `# install the Dynatrace exporter locally`
+export LOGLEVEL=DEBUG               `# (optional) Set the log level, valid values are: DEBUG, INFO, WARN/WARNING, ERROR, CRITICAL/FATAL
+python example/basic_example.py    
+```
+
+A more complete set up routine can be found [here](example/example_usage.sh), including installing inside a virtual environment and getting required packages.
+If you just want to see it in action, it should be sufficient to run [`example/example_usage.sh`](example/example_usage.sh).
+This script will set up a virtual environment, pull in all the required packages and run the [example](example/basic_example.py).
+
+The example also offers a simple CLI. Run `python example/basic_example.py -h` to get more information.
 
 ### Configuration
 
@@ -48,6 +64,7 @@ If a OneAgent is installed on the host, it can provide a local endpoint for prov
 This feature is currently in an Early Adopter phase and has to be enabled as described in the [OneAgent metric API documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/local-api/).
 Using the local API endpoint, the host ID and host name context are automatically added to each metric as dimensions.
 The default metric API endpoint exposed by the OneAgent is `http://localhost:14499/metrics/ingest`.
+If no endpoint is set, the OneAgent endpoint will be assumed as the default.
 
 #### Dynatrace API Token
 
@@ -60,11 +77,18 @@ The scope required for sending metrics is the `Ingest metrics` scope in the **AP
 
 #### Metric Key Prefix
 
-The `prefix` parameter specifies an optional prefix, which is prepended to each metric key, separated by a dot (`<prefix>.<namespace>.<name>`).
+The `prefix` parameter specifies an optional prefix, which is prepended metric key, separated by a dot (`<prefix>.<namespace>.<name>`).
 
-#### Default Labels/Dimensions
+#### Default Dimensions
 
-The `tags` parameter can be used to optionally specify a list of key/value pairs, which will be added as additional labels/dimensions to all data points.
+The `default_dimensions` parameter can be used to optionally specify a list of key/value pairs, which will be added as additional dimensions to all data points.
+Dimension keys are unique, and labels on instruments will overwrite the default dimensions if key collisions appear.
+
+#### Export OneAgent Metadata
+
+If running on a host with a running OneAgent, setting this option will export metadata collected by the OneAgent to the Dynatrace endpoint.
+If no Dynatrace API endpoint is set, the default exporter endpoint will be the OneAgent endpoint, and this option will be set automatically.
+Therefore, if no endpoint is specified, we assume a OneAgent is running and export to it, including metadata.
 
 ## Development
 

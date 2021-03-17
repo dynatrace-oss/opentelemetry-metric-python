@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# check if running as root
+# check if running as root. Helpful in environments where you are root but sudo is not installed. 
 if [ $EUID -eq 0 ]; then 
 	apt-get update 
 	apt-get install -y python3 python3-pip python3-venv
