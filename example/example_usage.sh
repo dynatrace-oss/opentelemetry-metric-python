@@ -9,12 +9,13 @@ else
 	sudo apt-get install -y python3 python3-pip python3-venv
 fi
 
-# change into the opentelemetry-metric-python folder if you havent already
-python3 -m venv .venv
+# change into the opentelemetry-metric-python folder if you haven't already
+python3 -m venv .venv 			`# create a new virtual environment in the current folder`
 
-# this will NOT set the venv for the shell that is calling this if run with ./example/setup_for_example.sh
-# to get this effect run source example/setup_for_example.sh
-source .venv/bin/activate 
-pip3 install --upgrade setuptools wheel
-pip3 install . 
-python3 example/basic_example.py
+source .venv/bin/activate
+pip3 install --upgrade setuptools wheel `# make sure setuptools and wheel are on the latest version`
+pip3 install psutil			`# for observing cpu and ram`
+pip3 install . 				`# install the library itself`
+# Valid log levels are: DEBUG, INFO, WARN/WARNING, ERROR, CRITICAL/FATAL
+export LOGLEVEL=DEBUG			`# set the log level`
+python3 example/basic_example.py	`# run the example in a venv`

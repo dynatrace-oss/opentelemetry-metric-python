@@ -21,12 +21,27 @@ from os.path import splitext, basename
 import argparse
 import logging
 import os
+import psutil
 
 def get_random_number(maximum: int, minimum: int = 0):
     if maximum < minimum:
         minimum, maximum = maximum, minimum
 
     return random.randint(minimum, maximum)
+
+# Callback to gather cpu usage
+def get_cpu_usage_callback(observer):
+    for (number, percent) in enumerate(psutil.cpu_percent(percpu=True)):
+        labels = {"cpu_number": str(number)}
+        observer.observe(percent, labels)
+
+
+
+# Callback to gather RAM memory usage
+def get_ram_usage_callback(observer):
+    ram_percent = psutil.virtual_memory().percent
+    observer.observe(ram_percent, {})
+
 
 
 def parse_arguments():
@@ -71,8 +86,9 @@ def parse_arguments():
 if __name__ == '__main__':
     args = parse_arguments()
 
-    # try to read the log level from the envrionment variable "LOGLEVEL" and
+    # try to read the log level from the environment variable "LOGLEVEL" and
     # setting it to "INFO" if not found.
+    # Valid levels are: DEBUG, INFO, WARN/WARNING, ERROR, CRITICAL/FATAL
     loglevel = os.environ.get("LOGLEVEL", "INFO").upper()
     logging.basicConfig(level=loglevel)
 
@@ -116,6 +132,22 @@ if __name__ == '__main__':
         value_type=int,
     )
 
+    vo = meter.register_valueobserver(
+        callback=get_cpu_usage_callback,
+        name="cpu_percent",
+        description="per-cpu usage",
+        unit="1",
+        value_type=float,
+    )
+
+    meter.register_valueobserver(
+        callback=get_ram_usage_callback,
+        name="ram_percent",
+        description="RAM memory usage",
+        unit="1",
+        value_type=float,
+    )
+
     # Labels are used to identify key-values that are associated with a
     # specific metric that you want to record. These are useful for
     # pre-aggregation and can be used to store custom dimensions pertaining
@@ -134,5 +166,6 @@ if __name__ == '__main__':
             requests_size.record(get_random_number(100), testing_labels)
             time.sleep(5)
 
+
     except KeyboardInterrupt:
-        print("shutting down...")
+        logging.info("shutting down...")
