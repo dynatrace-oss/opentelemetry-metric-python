@@ -45,11 +45,13 @@ class DynatraceMetricsExporter(MetricsExporter):
         default_dimensions: Optional[Mapping[str, str]] = None,
         export_oneagent_metadata: Optional[bool] = False,
     ):
+        self.__logger = logging.getLogger(__name__)
+
         if endpoint_url:
             self._endpoint_url = endpoint_url
         else:
-            logging.info("No Dynatrace endpoint specified, exporting "
-                         "to default local OneAgent ingest endpoint.")
+            self.__logger.info("No Dynatrace endpoint specified, exporting "
+                               "to default local OneAgent ingest endpoint.")
             self._endpoint_url = "http://localhost:14499/metrics/ingest"
 
         all_dimensions = default_dimensions or {}
@@ -66,9 +68,9 @@ class DynatraceMetricsExporter(MetricsExporter):
         }
         if api_token:
             if not endpoint_url:
-                logging.warning("Just API token but no endpoint passed. "
-                                "Skipping token authentication for local"
-                                " OneAgent endpoint")
+                self.__logger.warning("Just API token but no endpoint passed. "
+                                      "Skipping token authentication for local"
+                                      " OneAgent endpoint")
             else:
                 self._headers["Authorization"] = "Api-Token " + api_token
 
@@ -94,7 +96,8 @@ class DynatraceMetricsExporter(MetricsExporter):
             Indicates SUCCESS or FAILURE
         """
         serialized_records = self._serializer.serialize_records(metric_records)
-        logging.debug(serialized_records)
+        self.__logger.debug("sending lines:\n" + serialized_records)
+
         if not serialized_records:
             return MetricsExportResult.SUCCESS
 
@@ -105,7 +108,8 @@ class DynatraceMetricsExporter(MetricsExporter):
                 headers=self._headers,
             ) as resp:
                 resp.raise_for_status()
+                self.__logger.debug(resp.content)
         except Exception as ex:
-            logging.warning("Failed to export metrics: %s", ex)
+            self.__logger.warning("Failed to export metrics: %s", ex)
             return MetricsExportResult.FAILURE
         return MetricsExportResult.SUCCESS

@@ -23,11 +23,13 @@ import logging
 import os
 import psutil
 
+
 def get_random_number(maximum: int, minimum: int = 0):
     if maximum < minimum:
         minimum, maximum = maximum, minimum
 
     return random.randint(minimum, maximum)
+
 
 # Callback to gather cpu usage
 def get_cpu_usage_callback(observer):
@@ -36,12 +38,10 @@ def get_cpu_usage_callback(observer):
         observer.observe(percent, labels)
 
 
-
 # Callback to gather RAM memory usage
 def get_ram_usage_callback(observer):
     ram_percent = psutil.virtual_memory().percent
     observer.observe(ram_percent, {})
-
 
 
 def parse_arguments():
@@ -86,28 +86,32 @@ def parse_arguments():
 if __name__ == '__main__':
     args = parse_arguments()
 
+    script_name = splitext(basename(__file__))[0]
+    
     # try to read the log level from the environment variable "LOGLEVEL" and
     # setting it to "INFO" if not found.
     # Valid levels are: DEBUG, INFO, WARN/WARNING, ERROR, CRITICAL/FATAL
     loglevel = os.environ.get("LOGLEVEL", "INFO").upper()
     logging.basicConfig(level=loglevel)
+    logger = logging.getLogger(script_name)
 
     if not args.endpoint:
-        logging.warning("No Dynatrace endpoint specified, exporting to default local "
-              "OneAgent endpoint.")
+        logger.warning(
+            "No Dynatrace endpoint specified, exporting to default local "
+            "OneAgent endpoint.")
 
     # set up OpenTelemetry for export:
-    logging.info("setting up global OpenTelemetry configuration.")
+    logger.info("setting up global OpenTelemetry configuration.")
     metrics.set_meter_provider(MeterProvider())
     meter = metrics.get_meter(splitext(basename(__file__))[0])
 
-    logging.info("setting up Dynatrace metrics exporting interface.")
+    logger.info("setting up Dynatrace metrics exporting interface.")
     exporter = DynatraceMetricsExporter(args.endpoint, args.token,
                                         prefix="otel.python",
                                         export_oneagent_metadata=args.
                                         metadata_enrichment)
 
-    logging.info("registering Dynatrace exporter with the global OpenTelemetry"
+    logger.info("registering Dynatrace exporter with the global OpenTelemetry"
                  " instance...")
     # This call registers the meter and exporter with the global
     # MeterProvider set above. All instruments created by the meter that is
@@ -117,7 +121,7 @@ if __name__ == '__main__':
     # the same Dynatrace metrics exporter.
     metrics.get_meter_provider().start_pipeline(meter, exporter, args.interval)
 
-    logging.info("creating instruments to record metrics data")
+    logger.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
         name="requests",
         description="number of requests",
@@ -155,7 +159,7 @@ if __name__ == '__main__':
     staging_labels = {"environment": "staging"}
     testing_labels = {"environment": "testing"}
 
-    logging.info("starting instrumented application...")
+    logger.info("starting instrumented application...")
     try:
         while True:
             # Update the metric instruments using the direct calling convention
@@ -168,4 +172,4 @@ if __name__ == '__main__':
 
 
     except KeyboardInterrupt:
-        logging.info("shutting down...")
+        logger.info("shutting down...")

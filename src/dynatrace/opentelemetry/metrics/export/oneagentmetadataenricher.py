@@ -17,6 +17,9 @@ from typing import List, Mapping
 
 
 class OneAgentMetadataEnricher:
+    def __init__(self) -> None:
+        self.__logger = logging.getLogger(__name__)
+
     def add_oneagent_metadata_to_dimensions(self, tags: Mapping[str, str]):
         metadata_file_content = self._get_metadata_file_content()
         parsed_metadata = self._parse_oneagent_metadata(metadata_file_content)
@@ -33,13 +36,13 @@ class OneAgentMetadataEnricher:
                 file_name = metadata_indirection_file.read()
 
             if not file_name:
-                logging.warning("OneAgent metadata file not specified "
-                                "in indirection file.")
+                self.__logger.warning("OneAgent metadata file not specified "
+                                      "in indirection file.")
 
         except OSError:
-            logging.warning("Could not read local OneAgent metadata "
-                            "enrichment file. This is normal if no "
-                            "OneAgent is installed.")
+            self.__logger.warning("Could not read local OneAgent metadata "
+                                  "enrichment file. This is normal if no "
+                                  "OneAgent is installed.")
 
         return file_name
 
@@ -55,7 +58,7 @@ class OneAgentMetadataEnricher:
             with open(metadata_file_name, "r") as attributes_file:
                 return attributes_file.readlines()
         except OSError:
-            logging.info(
+            self.__logger.info(
                 "Could not read OneAgent metadata file ({}).".format(
                     metadata_file_name))
             return []
@@ -63,20 +66,20 @@ class OneAgentMetadataEnricher:
     def _parse_oneagent_metadata(self, lines) -> Mapping[str, str]:
         key_value_pairs = {}
         for line in lines:
-            logging.debug("Parsing line {}".format(line))
+            self.__logger.debug("Parsing line {}".format(line.rstrip("\n")))
 
             # remove leading and trailing whitespace and split at the first '='
             split = line.strip().split("=", 1)
 
             if len(split) != 2:
-                logging.warning("Could not parse line '{}'".format(line))
+                self.__logger.warning("Could not parse line '{}'".format(line))
                 continue
 
             key, value = split
 
             # None or empty:
             if not key or not value:
-                logging.warning("Could not parse line '{}'".format(line))
+                self.__logger.warning("Could not parse line '{}'".format(line))
                 continue
 
             key_value_pairs[key] = value
