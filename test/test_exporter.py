@@ -61,13 +61,13 @@ class TestExporterCreation(unittest.TestCase):
 
     def test_with_tags(self):
         tags = {"tag1": "tv1", "tag2": "tv2"}
-        exporter = DynatraceMetricsExporter(dimensions=tags)
+        exporter = DynatraceMetricsExporter(default_dimensions=tags)
 
         serializer = exporter._serializer
         self.assertEqual(tags, serializer._dimensions)
 
     def test_with_none_tags(self):
-        exporter = DynatraceMetricsExporter(dimensions=None)
+        exporter = DynatraceMetricsExporter(default_dimensions=None)
 
         serializer = exporter._serializer
         self.assertEqual({}, serializer._dimensions)
@@ -104,7 +104,7 @@ class TestExporterCreation(unittest.TestCase):
                     "oneagenttag1": "oneagentvalue1",
                     "oneagenttag2": "oneagentvalue2"}
 
-        exporter = DynatraceMetricsExporter(dimensions=tags,
+        exporter = DynatraceMetricsExporter(default_dimensions=tags,
                                             export_oneagent_metadata=True)
         serializer = exporter._serializer
         self.assertEqual(expected, serializer._dimensions)
@@ -120,7 +120,7 @@ class TestExporterCreation(unittest.TestCase):
                     "oneagenttag1": "oneagentvalue1",
                     "oneagenttag2": "oneagentvalue2"}
 
-        exporter = DynatraceMetricsExporter(dimensions=tags,
+        exporter = DynatraceMetricsExporter(default_dimensions=tags,
                                             export_oneagent_metadata=True)
         serializer = exporter._serializer
         self.assertEqual(expected, serializer._dimensions)

@@ -42,7 +42,7 @@ class DynatraceMetricsExporter(MetricsExporter):
         endpoint_url: Optional[str] = None,
         api_token: Optional[str] = None,
         prefix: Optional[str] = None,
-        dimensions: Optional[Mapping[str, str]] = None,
+        default_dimensions: Optional[Mapping[str, str]] = None,
         export_oneagent_metadata: Optional[bool] = False,
     ):
         if endpoint_url:
@@ -52,7 +52,7 @@ class DynatraceMetricsExporter(MetricsExporter):
                          "to default local OneAgent ingest endpoint.")
             self._endpoint_url = "http://localhost:14499/metrics/ingest"
 
-        all_dimensions = dimensions or {}
+        all_dimensions = default_dimensions or {}
 
         if export_oneagent_metadata:
             enricher = OneAgentMetadataEnricher()
