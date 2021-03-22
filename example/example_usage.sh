@@ -13,7 +13,7 @@ fi
 python3 -m venv .venv 			`# create a new virtual environment in the current folder`
 
 source .venv/bin/activate
-pip3 install --upgrade setuptools wheel `# make sure setuptools and wheel are on the latest version`
+pip3 install --upgrade setuptools 	`# make sure setuptools and wheel are on the latest version`
 pip3 install psutil			`# for observing cpu and ram`
 pip3 install . 				`# install the library itself`
 # Valid log levels are: DEBUG, INFO, WARN/WARNING, ERROR, CRITICAL/FATAL
