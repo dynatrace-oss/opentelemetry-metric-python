@@ -39,13 +39,13 @@ counter.add(25, {"dimension-1", "value-1"})
 To run the [example](example/basic_example.py), clone this repository and change to the `opentelemetry-metric-python` folder, then run:
 
 ```shell
-pip install .                       `# install the Dynatrace exporter locally`
-export LOGLEVEL=DEBUG               `# (optional) Set the log level, valid values are: DEBUG, INFO, WARN/WARNING, ERROR, CRITICAL/FATAL
-python example/basic_example.py    
+pip install .                       `# install the Dynatrace exporter`
+export LOGLEVEL=DEBUG               `# (optional) Set the log level to debug to see more output (default is INFO)`
+python example/basic_example.py
 ```
 
-A more complete set up routine can be found [here](example/example_usage.sh), including installing inside a virtual environment and getting required packages.
-If you just want to see it in action, it should be sufficient to run [`example/example_usage.sh`](example/example_usage.sh).
+A more complete setup routine can be found [here](example/install_and_run.sh), including installing inside a virtual environment and getting required packages.
+If you just want to see it in action, it should be sufficient to run [`example/install_and_run.sh`](example/install_and_run.sh).
 This script will set up a virtual environment, pull in all the required packages and run the [example](example/basic_example.py).
 
 The example also offers a simple CLI. Run `python example/basic_example.py -h` to get more information.
@@ -89,6 +89,9 @@ Dimension keys are unique, and labels on instruments will overwrite the default 
 If running on a host with a running OneAgent, setting this option will export metadata collected by the OneAgent to the Dynatrace endpoint.
 If no Dynatrace API endpoint is set, the default exporter endpoint will be the OneAgent endpoint, and this option will be set automatically.
 Therefore, if no endpoint is specified, we assume a OneAgent is running and export to it, including metadata.
+
+##### Dimensions precedence
+When specifying default dimensions, labels and OneAgent metadata enrichment, the precedence of dimensions with the same key is as follows: Default dimensions are overwritten by labels passed to instruments, which in turn are overwritten by the OneAgent dimensions (even though the likeliness of a collision here is very low). If the same key is present _within_ any of the three categories, the last occurrence of each key will be used.
 
 ## Development
 
