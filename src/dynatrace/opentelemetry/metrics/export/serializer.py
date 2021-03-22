@@ -67,26 +67,30 @@ class DynatraceMetricsSerializer:
 
     def __init__(
         self,
-        prefix: Optional[str],
-        dimensions: Optional[Mapping],
+        prefix: Optional[str] = "",
+        default_dimensions: Optional[Mapping] = None,
+        one_agent_dimensions: Optional[Mapping] = None,
     ):
         self._prefix = prefix
         self._is_delta_export = None
 
-        self._dimensions = self._normalize_dimensions(dimensions)
+        self._default_dimensions = self._normalize_dimensions(
+            default_dimensions)
+        self._one_agent_dimensions = self._normalize_dimensions(
+            one_agent_dimensions)
 
     @classmethod
     def _normalize_dimensions(cls, dimensions):
         dim_dict = {}
         if dimensions:
-            # normalize the dimensions once, so it doesnt have to be repeated
-            # for every serialisation
+            # normalize the dimensions once, so it doesn't have to be repeated
+            # for every serialization
             for k, v in dimensions.items():
                 key = cls._normalize_dimension_key(k)
                 if key:
                     dim_dict[key] = cls._normalize_dimension_value(v)
 
-        return dim_dict
+        return [(k, v) for k, v in dim_dict.items()]
 
     def serialize_records(
         self, records: Sequence[MetricRecord]
@@ -116,11 +120,14 @@ class DynatraceMetricsSerializer:
             return
         string_buffer.append(metric_key)
 
-        unique_dimensions = self._make_unique_dimensions(record.labels,
-                                                         self._dimensions.
-                                                         items())
-        DynatraceMetricsSerializer._write_dimensions(string_buffer,
-                                                     unique_dimensions)
+        # merge dimensions to make them unique
+        unique_dimensions = self._make_unique_dimensions(
+            self._default_dimensions,
+            record.labels,
+            self._one_agent_dimensions)
+
+        # add the merged dimension to the string builder.
+        self._write_dimensions(string_buffer, unique_dimensions)
 
         serialize_func(string_buffer, aggregator)
         self._write_timestamp(string_buffer, aggregator)
@@ -249,8 +256,9 @@ class DynatraceMetricsSerializer:
     def _write_dimensions(
         string_buffer: List[str], dimensions: Mapping[str, str]
     ):
-        # when the calling function uses make unique dimensions first, keys and
-        # values are already normalized to ensure correct duplicate elimination
+        """pass dimensions only after running them through
+        make_unique_dimensions. This ensures that all keys and values are
+        properly normalized and no duplicate keys exist. """
         for k, v in dimensions.items():
             string_buffer.append(",")
             string_buffer.append(k)
@@ -284,9 +292,22 @@ class DynatraceMetricsSerializer:
         return value
 
     @classmethod
-    def _make_unique_dimensions(cls, labels: Iterable[Tuple[str, str]],
-                                dimensions: Iterable[Tuple[str, str]]):
+    def _make_unique_dimensions(cls,
+                                default_dimensions: Iterable[Tuple[str, str]],
+                                labels: Iterable[Tuple[str, str]],
+                                one_agent_dimensions: Iterable[
+                                    Tuple[str, str]]):
+        """Merge default dimensions, user specified dimensions and OneAgent
+        dimensions. default dimensions will be overwritten by user-specified
+        dimensions, which will be overwritten by OneAgent dimensions.
+        Default and OneAgent dimensions are assumed to be normalized when
+        they are passed to this function."""
         dims_map = {}
+
+        if default_dimensions:
+            for k, v in default_dimensions:
+                dims_map[k] = v
+
         if labels:
             for k, v in labels:
                 key = cls._normalize_dimension_key(k)
@@ -296,8 +317,8 @@ class DynatraceMetricsSerializer:
         # overwrite dimensions that the user set with the default dimensions
         # and OneAgent metadata. Tags are normalized in __init__ so they
         # don't have to be re-normalized here.
-        if dimensions:
-            for k, v in dimensions:
+        if one_agent_dimensions:
+            for k, v in one_agent_dimensions:
                 dims_map[k] = v
 
         return dims_map

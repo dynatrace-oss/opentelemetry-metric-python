@@ -169,7 +169,8 @@ cases_dimension_values = [
     ("invalid consecutive trailing unicode", "a\u0000\u0000\u0000", "a"),
     ("invalid trailing unicode NUL", "a\u0000", "a"),
     ("invalid enclosed unicode NUL", "a\u0000b", "a_b"),
-    ("invalid consecutive enclosed unicode NUL", "a\u0000\u0007\u0000b", "a_b"),
+    (
+    "invalid consecutive enclosed unicode NUL", "a\u0000\u0007\u0000b", "a_b"),
     ("invalid truncate value too long", "a" * 270, "a" * 250),
 ]
 
