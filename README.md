@@ -77,7 +77,7 @@ The scope required for sending metrics is the `Ingest metrics` scope in the **AP
 
 #### Metric Key Prefix
 
-The `prefix` parameter specifies an optional prefix, which is prepended metric key, separated by a dot (`<prefix>.<namespace>.<name>`).
+The `prefix` parameter specifies an optional prefix, which is prepended to each metric key, separated by a dot (`<prefix>.<namespace>.<name>`).
 
 #### Default Dimensions
 
@@ -86,7 +86,7 @@ Dimension keys are unique, and labels on instruments will overwrite the default 
 
 #### Export OneAgent Metadata
 
-If running on a host with a running OneAgent, setting this option will export metadata collected by the OneAgent to the Dynatrace endpoint.
+If running on a host with a running OneAgent, setting the `export_oneagent_metadata` option to `True` will export metadata collected by the OneAgent to the Dynatrace endpoint.
 If no Dynatrace API endpoint is set, the default exporter endpoint will be the OneAgent endpoint, and this option will be set automatically.
 Therefore, if no endpoint is specified, we assume a OneAgent is running and export to it, including metadata.
 

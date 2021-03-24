@@ -24,13 +24,6 @@ import os
 import psutil
 
 
-def get_random_number(maximum: int, minimum: int = 0):
-    if maximum < minimum:
-        minimum, maximum = maximum, minimum
-
-    return random.randint(minimum, maximum)
-
-
 # Callback to gather cpu usage
 def get_cpu_usage_callback(observer):
     for (number, percent) in enumerate(psutil.cpu_percent(percpu=True)):
@@ -87,7 +80,7 @@ if __name__ == '__main__':
     args = parse_arguments()
 
     script_name = splitext(basename(__file__))[0]
-    
+
     # try to read the log level from the environment variable "LOGLEVEL" and
     # setting it to "INFO" if not found.
     # Valid levels are: DEBUG, INFO, WARN/WARNING, ERROR, CRITICAL/FATAL
@@ -96,12 +89,12 @@ if __name__ == '__main__':
     logger = logging.getLogger(script_name)
 
     if not args.endpoint:
-        logger.warning(
+        logger.info(
             "No Dynatrace endpoint specified, exporting to default local "
             "OneAgent endpoint.")
 
     # set up OpenTelemetry for export:
-    logger.info("setting up global OpenTelemetry configuration.")
+    logger.debug("setting up global OpenTelemetry configuration.")
     metrics.set_meter_provider(MeterProvider())
     meter = metrics.get_meter(splitext(basename(__file__))[0])
 
@@ -112,7 +105,7 @@ if __name__ == '__main__':
                                         metadata_enrichment)
 
     logger.info("registering Dynatrace exporter with the global OpenTelemetry"
-                 " instance...")
+                " instance...")
     # This call registers the meter and exporter with the global
     # MeterProvider set above. All instruments created by the meter that is
     # registered here will export to the Dynatrace metrics exporter. It is a
@@ -163,11 +156,11 @@ if __name__ == '__main__':
     try:
         while True:
             # Update the metric instruments using the direct calling convention
-            requests_counter.add(get_random_number(25), staging_labels)
-            requests_size.record(get_random_number(300), staging_labels)
+            requests_counter.add(random.randint(0, 25), staging_labels)
+            requests_size.record(random.randint(0, 300), staging_labels)
 
-            requests_counter.add(get_random_number(35), testing_labels)
-            requests_size.record(get_random_number(100), testing_labels)
+            requests_counter.add(random.randint(0, 35), testing_labels)
+            requests_size.record(random.randint(0, 100), testing_labels)
             time.sleep(5)
 
 

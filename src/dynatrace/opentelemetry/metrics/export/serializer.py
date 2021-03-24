@@ -74,6 +74,8 @@ class DynatraceMetricsSerializer:
         self._prefix = prefix
         self._is_delta_export = None
 
+        # normalize dimensions once so we don't have to do it in every
+        # iteration.
         self._default_dimensions = self._normalize_dimensions(
             default_dimensions)
         self._one_agent_dimensions = self._normalize_dimensions(
