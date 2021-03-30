@@ -17,6 +17,7 @@ from typing import Callable, Iterable, List, Mapping, Optional, Sequence, Tuple
 import re
 import unicodedata
 
+import typing
 from opentelemetry.metrics import get_meter_provider
 from opentelemetry.sdk.metrics.export import aggregate, MetricRecord
 
@@ -69,7 +70,7 @@ class DynatraceMetricsSerializer:
         self,
         prefix: Optional[str] = "",
         default_dimensions: Optional[Mapping] = None,
-        one_agent_dimensions: Optional[Mapping] = None,
+        oneagent_dimensions: Optional[Mapping] = None,
     ):
         self._prefix = prefix
         self._is_delta_export = None
@@ -78,8 +79,8 @@ class DynatraceMetricsSerializer:
         # iteration.
         self._default_dimensions = self._normalize_dimensions(
             default_dimensions)
-        self._one_agent_dimensions = self._normalize_dimensions(
-            one_agent_dimensions)
+        self._oneagent_dimensions = self._normalize_dimensions(
+            oneagent_dimensions)
 
     @classmethod
     def _normalize_dimensions(cls, dimensions):
@@ -92,7 +93,7 @@ class DynatraceMetricsSerializer:
                 if key:
                     dim_dict[key] = cls._normalize_dimension_value(v)
 
-        return [(k, v) for k, v in dim_dict.items()]
+        return dim_dict
 
     def serialize_records(
         self, records: Sequence[MetricRecord]
@@ -126,7 +127,7 @@ class DynatraceMetricsSerializer:
         unique_dimensions = self._make_unique_dimensions(
             self._default_dimensions,
             record.labels,
-            self._one_agent_dimensions)
+            self._oneagent_dimensions)
 
         # add the merged dimension to the string builder.
         self._write_dimensions(string_buffer, unique_dimensions)
@@ -197,7 +198,7 @@ class DynatraceMetricsSerializer:
         key = key[:cls.__mk_max_length]
         first, *rest = key.split(".")
 
-        first = (cls.__normalize_metric_key_first_section(first))
+        first = cls.__normalize_metric_key_first_section(first)
 
         if first == "":
             return ""
@@ -295,10 +296,9 @@ class DynatraceMetricsSerializer:
 
     @classmethod
     def _make_unique_dimensions(cls,
-                                default_dimensions: Iterable[Tuple[str, str]],
+                                default_dimensions: typing.Dict[str, str],
                                 labels: Iterable[Tuple[str, str]],
-                                one_agent_dimensions: Iterable[
-                                    Tuple[str, str]]):
+                                one_agent_dimensions: typing.Dict[str, str]):
         """Merge default dimensions, user specified dimensions and OneAgent
         dimensions. default dimensions will be overwritten by user-specified
         dimensions, which will be overwritten by OneAgent dimensions.
@@ -307,7 +307,7 @@ class DynatraceMetricsSerializer:
         dims_map = {}
 
         if default_dimensions:
-            for k, v in default_dimensions:
+            for k, v in default_dimensions.items():
                 dims_map[k] = v
 
         if labels:
@@ -320,7 +320,7 @@ class DynatraceMetricsSerializer:
         # and OneAgent metadata. Tags are normalized in __init__ so they
         # don't have to be re-normalized here.
         if one_agent_dimensions:
-            for k, v in one_agent_dimensions:
+            for k, v in one_agent_dimensions.items():
                 dims_map[k] = v
 
         return dims_map

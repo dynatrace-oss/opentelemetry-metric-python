@@ -179,9 +179,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         self.assertEqual(",dim1=value1,dim2=value2", "".join(target))
 
     def test_make_unique_dimensions_empty(self):
-        default_dims = []
-        user_dims = []
-        oneagent_dims = []
+        default_dims = {}
+        user_dims = {}
+        oneagent_dims = {}
 
         expected = {}
         got = serializer.DynatraceMetricsSerializer._make_unique_dimensions(
@@ -190,9 +190,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         self.assertDictEqual(expected, got)
 
     def test_make_unique_dimensions_valid(self):
-        default_dims = [("dim1", "dv1"), ("dim2", "dv2")]
+        default_dims = {"dim1": "dv1", "dim2": "dv2"}
         user_dims = [("tag1", "tv1"), ("tag2", "tv2")]
-        oneagent_dims = [("one1", "val1"), ("one2", "val2")]
+        oneagent_dims = {"one1": "val1", "one2": "val2"}
 
         expected = {"tag1": "tv1", "tag2": "tv2", "dim1": "dv1", "dim2": "dv2",
                     "one1": "val1", "one2": "val2"}
@@ -202,9 +202,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         self.assertDictEqual(expected, got)
 
     def test_make_unique_dimensions_overwrite(self):
-        defaultDims = [("dim1", "defv1"), ("dim2", "defv2"), ("dim3", "defv3")]
+        defaultDims = {"dim1": "defv1", "dim2": "defv2", "dim3": "defv3"}
         dimensions = [("dim1", "dimv2"), ("dim2", "dimv2")]
-        oneAgentDims = [("dim1", "onev1")]
+        oneAgentDims = {"dim1": "onev1"}
 
         expected = {"dim1": "onev1", "dim2": "dimv2", "dim3": "defv3"}
         got = serializer.DynatraceMetricsSerializer._make_unique_dimensions(
@@ -216,9 +216,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         # well-formed here as that is done in the  constructor of the
         # DynatraceMetricsExporter, so no malformed tags  should ever be
         # passed to this function.
-        default_dims = [("dim1", "defv1"), ("dim2", "defv2")]
+        default_dims = {"dim1": "defv1", "dim2": "defv2"}
         dims = [("~~!@$dim1", "dimv1"), ("@#$$%dim2", "dimv2")]
-        oneagent_dims = []
+        oneagent_dims = {}
 
         expected = {"dim1": "dimv1", "dim2": "dimv2"}
         got = serializer.DynatraceMetricsSerializer._make_unique_dimensions(
@@ -228,30 +228,30 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
 
     def test_normalize_dimensions(self):
         tags = {"tag1": "tv1", "tag2": "tv2"}
-        expected = [("tag1", "tv1"), ("tag2", "tv2")]
+        expected = {"tag1": "tv1", "tag2": "tv2"}
 
         got = serializer.DynatraceMetricsSerializer._normalize_dimensions(tags)
-        self.assertListEqual(expected, got)
+        self.assertDictEqual(expected, got)
 
     def test_normalize_dimensions_invalid(self):
         tags = {"@!#~tag1": "  \"val\"", "%%tag2@@": "", "": "empty"}
-        expected = [("tag1", "\\ \\ \"val\""), ("tag2", "")]
+        expected = {"tag1": "\\ \\ \"val\"", "tag2": ""}
 
         got = serializer.DynatraceMetricsSerializer._normalize_dimensions(tags)
-        self.assertListEqual(expected, got)
+        self.assertDictEqual(expected, got)
 
     def test_normalize_dimensions_pass_none_or_empty(self):
-        expected = []
+        expected = {}
         dimensions1 = None
 
         got1 = serializer.DynatraceMetricsSerializer._normalize_dimensions(
             dimensions1)
-        self.assertListEqual(expected, got1)
+        self.assertDictEqual(expected, got1)
 
         dimensions2 = {}
         got2 = serializer.DynatraceMetricsSerializer._normalize_dimensions(
             dimensions2)
-        self.assertListEqual(expected, got2)
+        self.assertDictEqual(expected, got2)
 
 
 class DummyMetric:
