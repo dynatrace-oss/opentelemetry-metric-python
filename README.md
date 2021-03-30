@@ -39,8 +39,8 @@ counter.add(25, {"dimension-1", "value-1"})
 To run the [example](example/basic_example.py), clone this repository and change to the `opentelemetry-metric-python` folder, then run:
 
 ```shell
-pip install .                       `# install the Dynatrace exporter`
-export LOGLEVEL=DEBUG               `# (optional) Set the log level to debug to see more output (default is INFO)`
+pip install .                       # install the Dynatrace exporter
+export LOGLEVEL=DEBUG               # (optional) Set the log level to debug to see more output (default is INFO)
 python example/basic_example.py
 ```
 
@@ -64,7 +64,7 @@ If a OneAgent is installed on the host, it can provide a local endpoint for prov
 This feature is currently in an Early Adopter phase and has to be enabled as described in the [OneAgent metric API documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/local-api/).
 Using the local API endpoint, the host ID and host name context are automatically added to each metric as dimensions.
 The default metric API endpoint exposed by the OneAgent is `http://localhost:14499/metrics/ingest`.
-If no endpoint is set, the OneAgent endpoint will be assumed as the default.
+If no endpoint is set and a OneAgent is running on the host, metrics will be exported to it automatically using the OneAgent with no endpoint or API token configuration required.
 
 #### Dynatrace API Token
 
@@ -91,7 +91,9 @@ If no Dynatrace API endpoint is set, the default exporter endpoint will be the O
 Therefore, if no endpoint is specified, we assume a OneAgent is running and export to it, including metadata.
 
 ##### Dimensions precedence
-When specifying default dimensions, labels and OneAgent metadata enrichment, the precedence of dimensions with the same key is as follows: Default dimensions are overwritten by labels passed to instruments, which in turn are overwritten by the OneAgent dimensions (even though the likeliness of a collision here is very low). If the same key is present _within_ any of the three categories, the last occurrence of each key will be used.
+
+When specifying default dimensions, labels and OneAgent metadata enrichment, the precedence of dimensions with the same key is as follows:
+Default dimensions are overwritten by labels passed to instruments, which in turn are overwritten by the OneAgent dimensions (even though the likeliness of a collision here is very low, since the OneAgent metadata only contains [Dynatrace reserved dimensions](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol/#syntax) starting with `dt.*`).
 
 ## Development
 
