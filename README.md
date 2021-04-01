@@ -45,8 +45,8 @@ python example/basic_example.py
 ```
 
 A more complete setup routine can be found [here](example/install_and_run.sh), including installing inside a virtual environment and getting required packages.
-If you just want to see it in action, it should be sufficient to run [`example/install_and_run.sh`](example/install_and_run.sh).
-This script will set up a virtual environment, pull in all the required packages and run the [example](example/basic_example.py).
+If you just want to see it in action, it should be sufficient to run [`example/install_and_run.sh`](example/install_and_run.sh) from the root folder.
+This script will install Python, set up a virtual environment, pull in all the required packages and run the [example](example/basic_example.py).
 
 The example also offers a simple CLI. Run `python example/basic_example.py -h` to get more information.
 
