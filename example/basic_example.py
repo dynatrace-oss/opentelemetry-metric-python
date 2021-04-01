@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import random
 import time
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
@@ -19,15 +19,32 @@ from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
 from os.path import splitext, basename
 import argparse
+import logging
+import os
+import psutil
+
+
+# Callback to gather cpu usage
+def get_cpu_usage_callback(observer):
+    for (number, percent) in enumerate(psutil.cpu_percent(percpu=True)):
+        labels = {"cpu_number": str(number)}
+        observer.observe(percent, labels)
+
+
+# Callback to gather RAM memory usage
+def get_ram_usage_callback(observer):
+    ram_percent = psutil.virtual_memory().percent
+    observer.observe(ram_percent, {})
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Example exporting metrics using the Dynatrace metrics "
                     "exporter.",
-        epilog="The script can be run without any arguments. In that case, "
-               "the local OneAgent is used as an endpoint, if it is installed.")
-    parser.add_argument("-e", "--endpoint", default=None, type=str, dest="endpoint",
+        epilog="The script can be run without any arguments. In that case, the"
+               " local OneAgent is used as an endpoint, if it is installed.")
+    parser.add_argument("-e", "--endpoint", default=None, type=str,
+                        dest="endpoint",
                         help="The endpoint url used to export metrics to. "
                              "This can be either a Dynatrace metrics "
                              "ingestion endpoint, or a local OneAgent "
@@ -62,18 +79,33 @@ def parse_arguments():
 if __name__ == '__main__':
     args = parse_arguments()
 
-    if not args.endpoint:
-        print("No Dynatrace endpoint specified, exporting to default local "
-              "OneAgent ingest endpoint.")
+    script_name = splitext(basename(__file__))[0]
 
-    # set up opentelemetry for export:
+    # try to read the log level from the environment variable "LOGLEVEL" and
+    # setting it to "INFO" if not found.
+    # Valid levels are: DEBUG, INFO, WARN/WARNING, ERROR, CRITICAL/FATAL
+    loglevel = os.environ.get("LOGLEVEL", "INFO").upper()
+    logging.basicConfig(level=loglevel)
+    logger = logging.getLogger(script_name)
+
+    if not args.endpoint:
+        logger.info(
+            "No Dynatrace endpoint specified, exporting to default local "
+            "OneAgent endpoint.")
+
+    # set up OpenTelemetry for export:
+    logger.debug("setting up global OpenTelemetry configuration.")
     metrics.set_meter_provider(MeterProvider())
     meter = metrics.get_meter(splitext(basename(__file__))[0])
 
+    logger.info("setting up Dynatrace metrics exporting interface.")
     exporter = DynatraceMetricsExporter(args.endpoint, args.token,
                                         prefix="otel.python",
-                                        export_oneagent_metadata=args.metadata_enrichment)
+                                        export_oneagent_metadata=args
+                                            .metadata_enrichment)
 
+    logger.info("registering Dynatrace exporter with the global OpenTelemetry"
+                " instance...")
     # This call registers the meter and exporter with the global
     # MeterProvider set above. All instruments created by the meter that is
     # registered here will export to the Dynatrace metrics exporter. It is a
@@ -82,6 +114,7 @@ if __name__ == '__main__':
     # the same Dynatrace metrics exporter.
     metrics.get_meter_provider().start_pipeline(meter, exporter, args.interval)
 
+    logger.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
         name="requests",
         description="number of requests",
@@ -96,26 +129,40 @@ if __name__ == '__main__':
         value_type=int,
     )
 
-    # Labels are used to identify key-values that are associated with a specific
-    # metric that you want to record. These are useful for pre-aggregation and
-    # can be used to store custom dimensions pertaining to a metric
+    vo = meter.register_valueobserver(
+        callback=get_cpu_usage_callback,
+        name="cpu_percent",
+        description="per-cpu usage",
+        unit="1",
+        value_type=float,
+    )
+
+    meter.register_valueobserver(
+        callback=get_ram_usage_callback,
+        name="ram_percent",
+        description="RAM memory usage",
+        unit="1",
+        value_type=float,
+    )
+
+    # Labels are used to identify key-values that are associated with a
+    # specific metric that you want to record. These are useful for
+    # pre-aggregation and can be used to store custom dimensions pertaining
+    # to a metric
     staging_labels = {"environment": "staging"}
     testing_labels = {"environment": "testing"}
 
+    logger.info("starting instrumented application...")
     try:
         while True:
             # Update the metric instruments using the direct calling convention
-            requests_counter.add(25, staging_labels)
-            requests_size.record(100, staging_labels)
+            requests_counter.add(random.randint(0, 25), staging_labels)
+            requests_size.record(random.randint(0, 300), staging_labels)
+
+            requests_counter.add(random.randint(0, 35), testing_labels)
+            requests_size.record(random.randint(0, 100), testing_labels)
             time.sleep(5)
 
-            requests_counter.add(50, staging_labels)
-            requests_size.record(5000, staging_labels)
-            time.sleep(5)
-
-            requests_counter.add(35, testing_labels)
-            requests_size.record(2, testing_labels)
-            time.sleep(5)
 
     except KeyboardInterrupt:
-        print("shutting down...")
+        logger.info("shutting down...")

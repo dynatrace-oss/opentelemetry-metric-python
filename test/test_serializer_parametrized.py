@@ -128,6 +128,7 @@ cases_dimension_keys = [
     ("invalid characters long",
      "a!b\"c#d$e%f&g'h(i)j*k+l,m-n.o/p:q;r<s=t>u?v@w[x]y\\z^0 1_2;3{4|5}6~7",
      "a_b_c_d_e_f_g_h_i_j_k_l_m-n.o_p:q_r_s_t_u_v_w_x_y_z_0_1_2_3_4_5_6_7"),
+    ("invalid none", None, ""),
     ("invalid example 1", "Tag", "tag"),
     ("invalid example 2", "0Tag", "tag"),
     ("invalid example 3", "tÄg", "t_g"),
@@ -147,6 +148,7 @@ def test_parametrized_normalize_dimension_keys(msg, inp, exp):
 
 cases_dimension_values = [
     ("valid value", "value", "value"),
+    ("valid empty", "", ""),
     ("valid uppercase", "VALUE", "VALUE"),
     ("valid colon", "a:3", "a:3"),
     ("valid value 2", "~@#ä", "~@#ä"),
@@ -158,18 +160,21 @@ cases_dimension_values = [
     ("escape key-value pair", "key=\"value\"", "key\\=\"value\""),
     # \u0000 NUL character, \u0007 bell character
     ("invalid unicode", "\u0000a\u0007", "a"),
+    ("invalid only unicode", "\u0000\u0000", ""),
     ("invalid unicode space", "a\u0001b", "a_b"),
     # 'Ab' in unicode:
     ("valid unicode", "\u0034\u0066", "\u0034\u0066"),
     # A umlaut, a with ring, O umlaut, U umlaut, all valid.
     ("valid unicode", "\u0132_\u0133_\u0150_\u0156",
      "\u0132_\u0133_\u0150_\u0156"),
+    ("invalid none", None, ""),
     ("invalid leading unicode NUL", "\u0000a", "a"),
     ("invalid consecutive leading unicode", "\u0000\u0000\u0000a", "a"),
     ("invalid consecutive trailing unicode", "a\u0000\u0000\u0000", "a"),
     ("invalid trailing unicode NUL", "a\u0000", "a"),
     ("invalid enclosed unicode NUL", "a\u0000b", "a_b"),
-    ("invalid consecutive enclosed unicode NUL", "a\u0000\u0007\u0000b", "a_b"),
+    (
+    "invalid consecutive enclosed unicode NUL", "a\u0000\u0007\u0000b", "a_b"),
     ("invalid truncate value too long", "a" * 270, "a" * 250),
 ]
 

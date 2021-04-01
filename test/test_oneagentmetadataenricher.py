@@ -21,7 +21,6 @@ from dynatrace.opentelemetry.metrics.export import OneAgentMetadataEnricher
 
 
 class TestOneAgentMetadataEnricher(unittest.TestCase):
-    __logger = logging.Logger(__name__)
 
     def test_parse_oneagent_metadata(self):
         enricher = OneAgentMetadataEnricher()
@@ -69,7 +68,7 @@ class TestParseMetadata(unittest.TestCase):
         # put something in the map to make sure items are added and not
         # overwritten.
         tags = {"tag1": "value1"}
-        enricher.add_oneagent_metadata_to_tags(tags)
+        enricher.add_oneagent_metadata_to_dimensions(tags)
 
         self.assertEqual(tags, {"tag1": "value1", "k1": "v1", "k2": "v2"})
 
@@ -80,7 +79,7 @@ class TestParseMetadata(unittest.TestCase):
         tags = {"tag1": "value1"}
         mock_func.return_value = {"tag1": "newValue"}
 
-        enricher.add_oneagent_metadata_to_tags(tags)
+        enricher.add_oneagent_metadata_to_dimensions(tags)
 
         self.assertEqual(tags, {"tag1": "newValue"})
 

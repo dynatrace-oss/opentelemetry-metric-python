@@ -17,6 +17,7 @@ from typing import Callable, Iterable, List, Mapping, Optional, Sequence, Tuple
 import re
 import unicodedata
 
+import typing
 from opentelemetry.metrics import get_meter_provider
 from opentelemetry.sdk.metrics.export import aggregate, MetricRecord
 
@@ -54,8 +55,8 @@ class DynatraceMetricsSerializer:
     __dk_max_length = 100
 
     # Dimension values (dv)
-    # all control characters (cc) are replaced with the null character and then
-    # removed as appropriate using the following regular expressions.
+    # all control characters (cc) are replaced with the null character (\u0000)
+    # and then removed as appropriate using the following regular expressions.
     __re_dv_cc = re.compile(r"\u0000+")
     __re_dv_cc_leading = re.compile(r"^" + __re_dv_cc.pattern)
     __re_dv_cc_trailing = re.compile(__re_dv_cc.pattern + r"$")
@@ -67,12 +68,32 @@ class DynatraceMetricsSerializer:
 
     def __init__(
         self,
-        prefix: Optional[str],
-        tags: Optional[Mapping],
+        prefix: Optional[str] = "",
+        default_dimensions: Optional[Mapping] = None,
+        oneagent_dimensions: Optional[Mapping] = None,
     ):
         self._prefix = prefix
-        self._tags = tags or {}
         self._is_delta_export = None
+
+        # normalize dimensions once so we don't have to do it in every
+        # iteration.
+        self._default_dimensions = self._normalize_dimensions(
+            default_dimensions)
+        self._oneagent_dimensions = self._normalize_dimensions(
+            oneagent_dimensions)
+
+    @classmethod
+    def _normalize_dimensions(cls, dimensions):
+        dim_dict = {}
+        if dimensions:
+            # normalize the dimensions once, so it doesn't have to be repeated
+            # for every serialization
+            for k, v in dimensions.items():
+                key = cls._normalize_dimension_key(k)
+                if key:
+                    dim_dict[key] = cls._normalize_dimension_value(v)
+
+        return dim_dict
 
     def serialize_records(
         self, records: Sequence[MetricRecord]
@@ -101,12 +122,17 @@ class DynatraceMetricsSerializer:
         if metric_key == "":
             return
         string_buffer.append(metric_key)
-        self._write_dimensions(string_buffer, record.labels)
-        if self._tags:
-            self._write_dimensions(string_buffer, self._tags.items())
+
+        # merge dimensions to make them unique
+        unique_dimensions = self._make_unique_dimensions(
+            self._default_dimensions,
+            record.labels,
+            self._oneagent_dimensions)
+
+        # add the merged dimension to the string builder.
+        self._write_dimensions(string_buffer, unique_dimensions)
 
         serialize_func(string_buffer, aggregator)
-
         self._write_timestamp(string_buffer, aggregator)
         string_buffer.append("\n")
 
@@ -169,19 +195,16 @@ class DynatraceMetricsSerializer:
 
     @classmethod
     def _normalize_metric_key(cls, key: str) -> str:
-        # truncate to maximum length.
         key = key[:cls.__mk_max_length]
-
         first, *rest = key.split(".")
 
-        first = (DynatraceMetricsSerializer.
-                 __normalize_metric_key_first_section(first))
+        first = cls.__normalize_metric_key_first_section(first)
 
         if first == "":
             return ""
 
         rest = list(filter(None, map(
-            DynatraceMetricsSerializer.__normalize_metric_key_section,
+            cls.__normalize_metric_key_section,
             rest,
         )))
 
@@ -189,7 +212,7 @@ class DynatraceMetricsSerializer:
 
     @classmethod
     def __normalize_metric_key_first_section(cls, section: str) -> str:
-        return DynatraceMetricsSerializer.__normalize_metric_key_section(
+        return cls.__normalize_metric_key_section(
             # delete invalid characters for first section start
             cls.__re_mk_first_identifier_section_start.sub("", section)
         )
@@ -206,6 +229,8 @@ class DynatraceMetricsSerializer:
 
     @classmethod
     def _normalize_dimension_key(cls, key: str):
+        if not key:
+            return ""
         # truncate dimension key to max length.
         key = key[:cls.__dk_max_length]
 
@@ -213,7 +238,7 @@ class DynatraceMetricsSerializer:
         sections = key.split(".")
         # normalize them and drop empty sections using filter
         normalized = list(filter(None, map(
-            DynatraceMetricsSerializer.__normalize_dimension_key_section,
+            cls.__normalize_dimension_key_section,
             sections
         )))
 
@@ -234,20 +259,16 @@ class DynatraceMetricsSerializer:
 
     @staticmethod
     def _write_dimensions(
-        string_buffer: List[str], dimensions: Iterable[Tuple[str, str]]
+        string_buffer: List[str], dimensions: Mapping[str, str]
     ):
-        for key, value in dimensions:
-            dim_key = DynatraceMetricsSerializer._normalize_dimension_key(key)
-            if dim_key:
-                dim_value = (DynatraceMetricsSerializer.
-                             _normalize_dimension_value(value))
-
-                string_buffer.append(",")
-                string_buffer.append(dim_key)
-                string_buffer.append("=")
-                string_buffer.append(dim_value)
-
-            # else: the dimension is empty, the dimension is dropped.
+        """pass dimensions only after running them through
+        make_unique_dimensions. This ensures that all keys and values are
+        properly normalized and no duplicate keys exist. """
+        for k, v in dimensions.items():
+            string_buffer.append(",")
+            string_buffer.append(k)
+            string_buffer.append("=")
+            string_buffer.append(v)
 
     @staticmethod
     def _write_timestamp(sb: List[str], aggregator: aggregate.Aggregator):
@@ -270,7 +291,40 @@ class DynatraceMetricsSerializer:
 
     @classmethod
     def _normalize_dimension_value(cls, value: str):
+        if not value:
+            return ""
         value = value[:cls.__dv_max_length]
-        value = DynatraceMetricsSerializer._remove_control_characters(value)
+        value = cls._remove_control_characters(value)
         value = cls.__re_dv_escape_chars.sub(r"\\\g<1>", value)
         return value
+
+    @classmethod
+    def _make_unique_dimensions(cls,
+                                default_dimensions: typing.Dict[str, str],
+                                labels: Iterable[Tuple[str, str]],
+                                one_agent_dimensions: typing.Dict[str, str]):
+        """Merge default dimensions, user specified dimensions and OneAgent
+        dimensions. default dimensions will be overwritten by user-specified
+        dimensions, which will be overwritten by OneAgent dimensions.
+        Default and OneAgent dimensions are assumed to be normalized when
+        they are passed to this function."""
+        dims_map = {}
+
+        if default_dimensions:
+            for k, v in default_dimensions.items():
+                dims_map[k] = v
+
+        if labels:
+            for k, v in labels:
+                key = cls._normalize_dimension_key(k)
+                if key:
+                    dims_map[key] = cls._normalize_dimension_value(v)
+
+        # overwrite dimensions that the user set with the default dimensions
+        # and OneAgent metadata. Tags are normalized in __init__ so they
+        # don't have to be re-normalized here.
+        if one_agent_dimensions:
+            for k, v in one_agent_dimensions.items():
+                dims_map[k] = v
+
+        return dims_map

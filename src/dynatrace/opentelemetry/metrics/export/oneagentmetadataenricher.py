@@ -17,12 +17,10 @@ from typing import List, Mapping
 
 
 class OneAgentMetadataEnricher:
-    __logger = None
-
     def __init__(self) -> None:
-        self.__logger = logging.Logger(self.__class__.__name__)
+        self.__logger = logging.getLogger(__name__)
 
-    def add_oneagent_metadata_to_tags(self, tags: Mapping[str, str]):
+    def add_oneagent_metadata_to_dimensions(self, tags: Mapping[str, str]):
         metadata_file_content = self._get_metadata_file_content()
         parsed_metadata = self._parse_oneagent_metadata(metadata_file_content)
         for key, value in parsed_metadata.items():
@@ -68,7 +66,7 @@ class OneAgentMetadataEnricher:
     def _parse_oneagent_metadata(self, lines) -> Mapping[str, str]:
         key_value_pairs = {}
         for line in lines:
-            self.__logger.debug("Parsing line {}".format(line))
+            self.__logger.debug("Parsing line {}".format(line.rstrip("\n")))
 
             # remove leading and trailing whitespace and split at the first '='
             split = line.strip().split("=", 1)
