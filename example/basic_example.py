@@ -102,7 +102,7 @@ if __name__ == '__main__':
     exporter = DynatraceMetricsExporter(args.endpoint, args.token,
                                         prefix="otel.python",
                                         export_oneagent_metadata=args
-                                        .metadata_enrichment)
+                                            .metadata_enrichment)
 
     logger.info("registering Dynatrace exporter with the global OpenTelemetry"
                 " instance...")
