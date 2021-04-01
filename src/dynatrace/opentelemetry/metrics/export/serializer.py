@@ -229,6 +229,8 @@ class DynatraceMetricsSerializer:
 
     @classmethod
     def _normalize_dimension_key(cls, key: str):
+        if not key:
+            return ""
         # truncate dimension key to max length.
         key = key[:cls.__dk_max_length]
 
@@ -289,6 +291,8 @@ class DynatraceMetricsSerializer:
 
     @classmethod
     def _normalize_dimension_value(cls, value: str):
+        if not value:
+            return ""
         value = value[:cls.__dv_max_length]
         value = cls._remove_control_characters(value)
         value = cls.__re_dv_escape_chars.sub(r"\\\g<1>", value)
