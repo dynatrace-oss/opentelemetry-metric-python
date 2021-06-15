@@ -57,7 +57,7 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         serialized = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr,l1=v1,l2=v2 count,10 555\n", serialized)
+        self.assertEqual("my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 555\n", serialized)
 
     def test_sum_aggregator_delta(self):
         self._meter_provider.stateful = False
@@ -67,7 +67,7 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         result = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr,l1=v1,l2=v2 count,delta=10 555\n", result)
+        self.assertEqual("my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 555\n", result)
 
     def test_min_max_sum_count_aggregator(self):
         aggregator = aggregate.MinMaxSumCountAggregator()
@@ -79,7 +79,7 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         result = self._serializer.serialize_records([record])
 
         self.assertEqual(
-            "my.instr,l1=v1,l2=v2 gauge,min=1,max=100,sum=111,count=3 999\n",
+            "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=100,sum=111,count=3 999\n",
             result
         )
 
@@ -90,7 +90,7 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         result = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr,l1=v1,l2=v2 count,20 777\n", result)
+        self.assertEqual("my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,20 777\n", result)
 
     def test_multiple_records(self):
         records = []
@@ -111,9 +111,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         serialized = self._serializer.serialize_records(records)
 
         self.assertEqual(
-            "my.instr,l1=v1,l2=v2 count,10 555\n"
-            "my.instr,l1=v1,l2=v2 gauge,min=1,max=100,sum=111,count=3 999\n"
-            "my.instr,l1=v1,l2=v2 count,20 777\n",
+            "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 555\n"
+            "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=100,sum=111,count=3 999\n"
+            "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,20 777\n",
             serialized,
         )
 
@@ -124,7 +124,7 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         serialized = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr count,10 555\n", serialized)
+        self.assertEqual("my.instr,dt.metrics.source=opentelemetry count,10 555\n", serialized)
 
     def test_prefix(self):
         prefix = "prefix"
@@ -135,7 +135,7 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         result = self._serializer.serialize_records([record])
 
-        self.assertEqual("prefix.my.instr,l1=v1,l2=v2 count,10 111\n", result)
+        self.assertEqual("prefix.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 111\n", result)
 
     def test_tags(self):
         dimensions = {"t1": "tv1", "t2": "tv2"}
@@ -148,7 +148,7 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         result = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr,t1=tv1,t2=tv2,l1=v1,l2=v2 count,10 111\n",
+        self.assertEqual("my.instr,t1=tv1,t2=tv2,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 111\n",
                          result)
 
     def test_invalid_name(self):

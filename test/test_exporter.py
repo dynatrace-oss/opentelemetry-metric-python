@@ -9,24 +9,36 @@ class TestExporterCreation(unittest.TestCase):
         exporter = DynatraceMetricsExporter()
         self.assertEqual("http://localhost:14499/metrics/ingest",
                          exporter._endpoint_url)
-        self.assertEqual(2, len(exporter._headers))
+        self.assertEqual(3, len(exporter._headers))
         self.assertNotIn("Authorization", exporter._headers)
         serializer = exporter._serializer
         self.assertEqual(None, serializer._prefix)
         self.assertDictEqual({}, serializer._default_dimensions)
-        self.assertDictEqual({}, serializer._oneagent_dimensions)
+        self.assertDictEqual({"dt.metrics.source": "opentelemetry"},
+                             serializer._static_dimensions)
 
     def test_with_endpoint(self):
         endpoint = "https://abc1234.dynatrace.com/metrics/ingest"
         exporter = DynatraceMetricsExporter(endpoint_url=endpoint)
 
         self.assertEqual(endpoint, exporter._endpoint_url)
-        self.assertEqual(2, len(exporter._headers))
+        self.assertEqual(3, len(exporter._headers))
         self.assertNotIn("Authorization", exporter._headers)
         serializer = exporter._serializer
         self.assertEqual(None, serializer._prefix)
         self.assertDictEqual({}, serializer._default_dimensions)
-        self.assertDictEqual({}, serializer._oneagent_dimensions)
+        self.assertDictEqual({"dt.metrics.source": "opentelemetry"},
+                             serializer._static_dimensions)
+
+    def test_has_useragent_header(self):
+        endpoint = "https://abc1234.dynatrace.com/metrics/ingest"
+        exporter = DynatraceMetricsExporter(endpoint_url=endpoint)
+
+        self.assertEqual(endpoint, exporter._endpoint_url)
+        self.assertEqual(3, len(exporter._headers))
+        self.assertIn("User-Agent", exporter._headers)
+        self.assertEqual(exporter._headers["User-Agent"],
+                         "opentelemetry-metric-python")
 
     def test_with_endpoint_and_token(self):
         endpoint = "https://abc1234.dynatrace.com/metrics/ingest"
@@ -35,13 +47,14 @@ class TestExporterCreation(unittest.TestCase):
                                             api_token=token)
 
         self.assertEqual(endpoint, exporter._endpoint_url)
-        self.assertEqual(3, len(exporter._headers))
+        self.assertEqual(4, len(exporter._headers))
         self.assertEqual("Api-Token {}".format(token),
                          exporter._headers["Authorization"])
         serializer = exporter._serializer
         self.assertEqual(None, serializer._prefix)
         self.assertDictEqual({}, serializer._default_dimensions)
-        self.assertDictEqual({}, serializer._oneagent_dimensions)
+        self.assertDictEqual({"dt.metrics.source": "opentelemetry"},
+                             serializer._static_dimensions)
 
     def test_with_only_token(self):
         token = "my.secret.token"
@@ -49,12 +62,13 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual("http://localhost:14499/metrics/ingest",
                          exporter._endpoint_url)
-        self.assertEqual(2, len(exporter._headers))
+        self.assertEqual(3, len(exporter._headers))
         self.assertNotIn("Authorization", exporter._headers)
         serializer = exporter._serializer
         self.assertEqual(None, serializer._prefix)
         self.assertDictEqual({}, serializer._default_dimensions)
-        self.assertDictEqual({}, serializer._oneagent_dimensions)
+        self.assertDictEqual({"dt.metrics.source": "opentelemetry"},
+                             serializer._static_dimensions)
 
     def test_with_prefix(self):
         prefix = "test_prefix"
@@ -84,11 +98,12 @@ class TestExporterCreation(unittest.TestCase):
         mock_func.return_value = ["oneagenttag1=oneagentvalue1",
                                   "oneagenttag2=oneagentvalue2"]
         expected = {"oneagenttag1": "oneagentvalue1",
-                    "oneagenttag2": "oneagentvalue2"}
+                    "oneagenttag2": "oneagentvalue2",
+                    "dt.metrics.source": "opentelemetry"}
 
         exporter = DynatraceMetricsExporter(export_oneagent_metadata=True)
         serializer = exporter._serializer
-        self.assertDictEqual(expected, serializer._oneagent_dimensions)
+        self.assertDictEqual(expected, serializer._static_dimensions)
 
     @patch('dynatrace.opentelemetry.metrics.export.oneagentmetadataenricher'
            '.OneAgentMetadataEnricher._get_metadata_file_content')
@@ -107,14 +122,15 @@ class TestExporterCreation(unittest.TestCase):
         dimensions = {"tag1": "tv1", "tag2": "tv2"}
 
         expected_default = {"tag1": "tv1", "tag2": "tv2"}
-        expected_oneagent = {"oneagenttag1": "oneagentvalue1",
-                             "oneagenttag2": "oneagentvalue2"}
+        expected_static = {"oneagenttag1": "oneagentvalue1",
+                           "oneagenttag2": "oneagentvalue2",
+                           "dt.metrics.source": "opentelemetry"}
 
         exporter = DynatraceMetricsExporter(default_dimensions=dimensions,
                                             export_oneagent_metadata=True)
         serializer = exporter._serializer
-        self.assertDictEqual(expected_oneagent,
-                             serializer._oneagent_dimensions)
+        self.assertDictEqual(expected_static,
+                             serializer._static_dimensions)
         self.assertDictEqual(expected_default, serializer._default_dimensions)
 
 

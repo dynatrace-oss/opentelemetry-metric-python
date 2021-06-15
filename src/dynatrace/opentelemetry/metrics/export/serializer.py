@@ -79,8 +79,10 @@ class DynatraceMetricsSerializer:
         # iteration.
         self._default_dimensions = self._normalize_dimensions(
             default_dimensions)
-        self._oneagent_dimensions = self._normalize_dimensions(
+
+        self._static_dimensions = self._normalize_dimensions(
             oneagent_dimensions)
+        self._static_dimensions["dt.metrics.source"] = "opentelemetry"
 
     @classmethod
     def _normalize_dimensions(cls, dimensions):
@@ -127,7 +129,7 @@ class DynatraceMetricsSerializer:
         unique_dimensions = self._make_unique_dimensions(
             self._default_dimensions,
             record.labels,
-            self._oneagent_dimensions)
+            self._static_dimensions)
 
         # add the merged dimension to the string builder.
         self._write_dimensions(string_buffer, unique_dimensions)

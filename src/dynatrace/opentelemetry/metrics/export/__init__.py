@@ -67,6 +67,7 @@ class DynatraceMetricsExporter(MetricsExporter):
         self._headers = {
             "Accept": "*/*; q=0",
             "Content-Type": "text/plain; charset=utf-8",
+            "User-Agent": "opentelemetry-metric-python",
         }
         if api_token:
             if not endpoint_url:
