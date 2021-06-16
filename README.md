@@ -89,6 +89,8 @@ Dimension keys are unique, and labels on instruments will overwrite the default 
 If running on a host with a running OneAgent, setting the `export_oneagent_metadata` option to `True` will export metadata collected by the OneAgent to the Dynatrace endpoint.
 If no Dynatrace API endpoint is set, the default exporter endpoint will be the OneAgent endpoint, and this option will be set automatically.
 Therefore, if no endpoint is specified, we assume a OneAgent is running and export to it, including metadata.
+More information on the underlying OneAgent feature that is used by the exporter can be found in the
+[Dynatrace documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/enrich-metrics/).
 
 ##### Dimensions precedence
 
