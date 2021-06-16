@@ -1,12 +1,8 @@
 # Dynatrace OpenTelemetry Metrics Exporter for Python
 
-> This project is developed and maintained by Dynatrace R&D.
-Currently, this is a prototype and not intended for production use.
-It is not covered by Dynatrace support.
-
-This exporter plugs into the OpenTelemetry Metrics SDK for Python, which is in alpha/preview state and neither considered stable nor complete as of this writing.
-
-See [open-telemetry/opentelemetry-python](https://github.com/open-telemetry/opentelemetry-python) for the current state of the OpenTelemetry SDK for Python.
+> This exporter is based on the OpenTelemetry Metrics SDK for Python, which is currently in an alpha state and neither considered stable nor complete as of this writing.
+> As such, this exporter is not intended for production use until the underlying OpenTelemetry Metrics API and SDK are stable.
+> See [open-telemetry/opentelemetry-python](https://github.com/open-telemetry/opentelemetry-python) for the current state of the OpenTelemetry SDK for Python.
 
 ## Getting started
 
