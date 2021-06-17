@@ -1,12 +1,8 @@
 # Dynatrace OpenTelemetry Metrics Exporter for Python
 
-> This project is developed and maintained by Dynatrace R&D.
-Currently, this is a prototype and not intended for production use.
-It is not covered by Dynatrace support.
-
-This exporter plugs into the OpenTelemetry Metrics SDK for Python, which is in alpha/preview state and neither considered stable nor complete as of this writing.
-
-See [open-telemetry/opentelemetry-python](https://github.com/open-telemetry/opentelemetry-python) for the current state of the OpenTelemetry SDK for Python.
+> This exporter is based on the OpenTelemetry Metrics SDK for Python, which is currently in an alpha state and neither considered stable nor complete as of this writing.
+> As such, this exporter is not intended for production use until the underlying OpenTelemetry Metrics API and SDK are stable.
+> See [open-telemetry/opentelemetry-python](https://github.com/open-telemetry/opentelemetry-python) for the current state of the OpenTelemetry SDK for Python.
 
 ## Getting started
 
@@ -89,6 +85,8 @@ Dimension keys are unique, and labels on instruments will overwrite the default 
 If running on a host with a running OneAgent, setting the `export_oneagent_metadata` option to `True` will export metadata collected by the OneAgent to the Dynatrace endpoint.
 If no Dynatrace API endpoint is set, the default exporter endpoint will be the OneAgent endpoint, and this option will be set automatically.
 Therefore, if no endpoint is specified, we assume a OneAgent is running and export to it, including metadata.
+More information on the underlying OneAgent feature that is used by the exporter can be found in the
+[Dynatrace documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/enrich-metrics/).
 
 ##### Dimensions precedence
 
