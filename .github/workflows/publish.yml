@@ -1,10 +1,8 @@
 name: Upload Python Package to PyPI
 
 on:
-  push:
-    tags:
-      # upon creating a tag starting with "v"
-      - "v*"
+  release:
+    types: [published]
 
 jobs:
   publish:
