@@ -23,7 +23,7 @@ from opentelemetry.sdk.metrics.export import (
 )
 
 from .serializer import DynatraceMetricsSerializer
-from .oneagentmetadataenricher import OneAgentMetadataEnricher
+from .dynatracemetadataenricher import DynatraceMetadataEnricher
 
 VERSION = "0.1.0b0"
 
@@ -43,7 +43,7 @@ class DynatraceMetricsExporter(MetricsExporter):
         api_token: Optional[str] = None,
         prefix: Optional[str] = None,
         default_dimensions: Optional[Mapping[str, str]] = None,
-        export_oneagent_metadata: Optional[bool] = False,
+        export_dynatrace_metadata: Optional[bool] = False,
     ):
         self.__logger = logging.getLogger(__name__)
 
@@ -54,15 +54,16 @@ class DynatraceMetricsExporter(MetricsExporter):
                                "to default local OneAgent ingest endpoint.")
             self._endpoint_url = "http://localhost:14499/metrics/ingest"
 
-        oneagent_dims = {}
+        dynatrace_metadata_dims = {}
 
-        if export_oneagent_metadata:
-            enricher = OneAgentMetadataEnricher()
-            enricher.add_oneagent_metadata_to_dimensions(oneagent_dims)
+        if export_dynatrace_metadata:
+            enricher = DynatraceMetadataEnricher()
+            enricher.add_dynatrace_metadata_to_dimensions(
+                dynatrace_metadata_dims)
 
         self._serializer = DynatraceMetricsSerializer(prefix,
                                                       default_dimensions,
-                                                      oneagent_dims)
+                                                      dynatrace_metadata_dims)
         self._session = requests.Session()
         self._headers = {
             "Accept": "*/*; q=0",

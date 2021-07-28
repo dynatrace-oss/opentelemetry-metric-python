@@ -59,9 +59,9 @@ def parse_arguments():
 
     parser.add_argument("-nm", "--no-metadata", dest="metadata_enrichment",
                         action="store_false",
-                        help="Turn off OneAgent Metadata enrichment. If no "
+                        help="Turn off Dynatrace Metadata enrichment. If no "
                              "OneAgent is running on the machine, this is "
-                             "ignored. Otherwise, OneAgent metadata will be "
+                             "ignored. Otherwise, Dynatrace metadata will be "
                              "added to each of the exported metric lines.")
 
     parser.add_argument("-i", "--interval", default=10., type=float,
@@ -101,8 +101,8 @@ if __name__ == '__main__':
     logger.info("setting up Dynatrace metrics exporting interface.")
     exporter = DynatraceMetricsExporter(args.endpoint, args.token,
                                         prefix="otel.python",
-                                        export_oneagent_metadata=args
-                                            .metadata_enrichment)
+                                        export_dynatrace_metadata=
+                                        args.metadata_enrichment)
 
     logger.info("registering Dynatrace exporter with the global OpenTelemetry"
                 " instance...")
@@ -162,7 +162,6 @@ if __name__ == '__main__':
             requests_counter.add(random.randint(0, 35), testing_labels)
             requests_size.record(random.randint(0, 100), testing_labels)
             time.sleep(5)
-
 
     except KeyboardInterrupt:
         logger.info("shutting down...")
