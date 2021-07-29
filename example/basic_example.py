@@ -61,7 +61,7 @@ def parse_arguments():
     parser.add_argument("-nm", "--no-metadata", dest="metadata_enrichment",
                         action="store_false",
                         help="Turn off Dynatrace Metadata enrichment. If no "
-                             "OneAgent or Dynatrace operator is running on "
+                             "OneAgent is running on "
                              "the host, this is ignored. Otherwise, Dynatrace "
                              "metadata will be added to each of the exported "
                              "metric lines.")
