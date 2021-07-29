@@ -6,6 +6,14 @@
 
 ## Getting started
 
+### Installation
+
+To install the [latest version from PyPI](https://pypi.org/project/opentelemetry-exporter-dynatrace-metrics/) run:
+
+```shell
+pip install opentelemetry-exporter-dynatrace-metrics
+```
+
 ### Usage
 
 The general setup of OpenTelemetry Python is explained in the official [Getting Started Guide](https://opentelemetry-python.readthedocs.io/en/stable/getting-started.html).
@@ -35,8 +43,8 @@ counter.add(25, {"dimension-1", "value-1"})
 To run the [example](example/basic_example.py), clone this repository and change to the `opentelemetry-metric-python` folder, then run:
 
 ```shell
-pip install .                       # install the Dynatrace exporter
-export LOGLEVEL=DEBUG               # (optional) Set the log level to debug to see more output (default is INFO)
+pip install .           # install the Dynatrace exporter
+export LOGLEVEL=DEBUG   # (optional) Set the log level to debug to see more output (default is INFO)
 python example/basic_example.py
 ```
 
@@ -80,29 +88,29 @@ The `prefix` parameter specifies an optional prefix, which is prepended to each 
 The `default_dimensions` parameter can be used to optionally specify a list of key/value pairs, which will be added as additional dimensions to all data points.
 Dimension keys are unique, and labels on instruments will overwrite the default dimensions if key collisions appear.
 
-#### Export OneAgent Metadata
+#### Export Dynatrace Metadata
 
-If running on a host with a running OneAgent, setting the `export_oneagent_metadata` option to `True` will export metadata collected by the OneAgent to the Dynatrace endpoint.
+If running on a host with a running OneAgent or a Dynatrace Operator, setting the `export_dynatrace_metadata` option to `True` will export metadata collected by the OneAgent to the Dynatrace endpoint.
 If no Dynatrace API endpoint is set, the default exporter endpoint will be the OneAgent endpoint, and this option will be set automatically.
-Therefore, if no endpoint is specified, we assume a OneAgent is running and export to it, including metadata.
-More information on the underlying OneAgent feature that is used by the exporter can be found in the
+Therefore, if no endpoint is specified, a OneAgent is assumed to be running and used as the export endpoint for all metric lines, including metadata.
+More information on the underlying Dynatrace metadata feature that is used by the exporter can be found in the
 [Dynatrace documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/enrich-metrics/).
 
 ##### Dimensions precedence
 
-When specifying default dimensions, labels and OneAgent metadata enrichment, the precedence of dimensions with the same key is as follows:
-Default dimensions are overwritten by labels passed to instruments, which in turn are overwritten by the OneAgent dimensions (even though the likeliness of a collision here is very low, since the OneAgent metadata only contains [Dynatrace reserved dimensions](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol/#syntax) starting with `dt.*`).
+When specifying default dimensions, labels and Dynatrace metadata enrichment, the precedence of dimensions with the same key is as follows:
+Default dimensions are overwritten by labels passed to instruments, which in turn are overwritten by the Dynatrace metadata dimensions (even though the likeliness of a collision here is very low, since the Dynatrace metadata only contains [Dynatrace reserved dimensions](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol/#syntax) starting with `dt.*`).
 
 ## Development
 
 ### Requirements
 
-Just [`tox`](https://pypi.org/project/tox/)
+Just [`tox`](https://pypi.org/project/tox/).
 
 ### Running tests and lint
 
-*Test all supported python versions:* `tox`
-*Test all supported python versions in parallel:* `tox -p`
-*A particular python version:* `tox -e 38`
-*Current python version*: `tox -e py`
-*Lint*: `tox -e lint`
+* Test all supported python versions: `tox`
+* Test all supported python versions in parallel: `tox -p`
+* A particular python version: `tox -e 38`
+* Current python version: `tox -e py`
+* Lint: `tox -e lint`

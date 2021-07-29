@@ -95,8 +95,9 @@ class TestExporterCreation(unittest.TestCase):
     @patch('dynatrace.opentelemetry.metrics.export.dynatracemetadataenricher'
            '.DynatraceMetadataEnricher._get_metadata_file_content')
     def test_dynatrace_metadata_enrichment_valid_tags(self, mock_func):
-        mock_func.return_value = ["dynatrace_metadatatag1=dynatrace_metadatavalue1",
-                                  "dynatrace_metadatatag2=dynatrace_metadatavalue2"]
+        mock_func.return_value = [
+            "dynatrace_metadatatag1=dynatrace_metadatavalue1",
+            "dynatrace_metadatatag2=dynatrace_metadatavalue2"]
         expected = {"dynatrace_metadatatag1": "dynatrace_metadatavalue1",
                     "dynatrace_metadatatag2": "dynatrace_metadatavalue2",
                     "dt.metrics.source": "opentelemetry"}
@@ -117,14 +118,16 @@ class TestExporterCreation(unittest.TestCase):
     @patch('dynatrace.opentelemetry.metrics.export.dynatracemetadataenricher'
            '.DynatraceMetadataEnricher._get_metadata_file_content')
     def test_dynatrace_metadata_enrichment_empty_add_to_tags(self, mock_func):
-        mock_func.return_value = ["dynatrace_metadatatag1=dynatrace_metadatavalue1",
-                                  "dynatrace_metadatatag2=dynatrace_metadatavalue2"]
+        mock_func.return_value = [
+            "dynatrace_metadatatag1=dynatrace_metadatavalue1",
+            "dynatrace_metadatatag2=dynatrace_metadatavalue2"]
         dimensions = {"tag1": "tv1", "tag2": "tv2"}
 
         expected_default = {"tag1": "tv1", "tag2": "tv2"}
-        expected_static = {"dynatrace_metadatatag1": "dynatrace_metadatavalue1",
-                           "dynatrace_metadatatag2": "dynatrace_metadatavalue2",
-                           "dt.metrics.source": "opentelemetry"}
+        expected_static = {
+            "dynatrace_metadatatag1": "dynatrace_metadatavalue1",
+            "dynatrace_metadatatag2": "dynatrace_metadatavalue2",
+            "dt.metrics.source": "opentelemetry"}
 
         exporter = DynatraceMetricsExporter(default_dimensions=dimensions,
                                             export_dynatrace_metadata=True)

@@ -10,12 +10,12 @@ else
 fi
 
 # change into the opentelemetry-metric-python folder if you haven't already
-python3 -m venv .venv 			`# create a new virtual environment in the current folder`
+python3 -m venv .venv   `# create a new virtual environment in the current folder`
 
 source .venv/bin/activate
-pip3 install --upgrade setuptools 	`# make sure setuptools and wheel are on the latest version`
-pip3 install psutil			`# for observing cpu and ram`
-pip3 install . 				`# install the library itself`
+pip3 install --upgrade setuptools   `# make sure setuptools and wheel are on the latest version`
+pip3 install psutil                 `# for observing cpu and ram`
+pip3 install .                      `# install the library itself`
 # Valid log levels are: DEBUG, INFO, WARN/WARNING, ERROR, CRITICAL/FATAL
-export LOGLEVEL=DEBUG			`# set the log level`
-python3 example/basic_example.py	`# run the example in a venv`
+export LOGLEVEL=DEBUG               `# set the log level`
+python3 example/basic_example.py    `# run the example in a venv`

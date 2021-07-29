@@ -11,17 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import random
-import time
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
+
 from os.path import splitext, basename
 import argparse
 import logging
 import os
 import psutil
+import random
+import time
 
 
 # Callback to gather cpu usage
@@ -60,9 +61,10 @@ def parse_arguments():
     parser.add_argument("-nm", "--no-metadata", dest="metadata_enrichment",
                         action="store_false",
                         help="Turn off Dynatrace Metadata enrichment. If no "
-                             "OneAgent is running on the machine, this is "
-                             "ignored. Otherwise, Dynatrace metadata will be "
-                             "added to each of the exported metric lines.")
+                             "OneAgent or Dynatrace operator is running on "
+                             "the host, this is ignored. Otherwise, Dynatrace "
+                             "metadata will be added to each of the exported "
+                             "metric lines.")
 
     parser.add_argument("-i", "--interval", default=10., type=float,
                         dest="interval",

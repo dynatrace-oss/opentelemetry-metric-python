@@ -123,7 +123,7 @@ class DynatraceMetricsSerializer:
         metric_key = self._get_metric_key(record)
         if metric_key == "":
             return
-        
+
         string_buffer.append(metric_key)
 
         # merge dimensions to make them unique
