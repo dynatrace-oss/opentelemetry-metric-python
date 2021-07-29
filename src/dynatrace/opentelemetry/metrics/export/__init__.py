@@ -25,7 +25,7 @@ from opentelemetry.sdk.metrics.export import (
 from .serializer import DynatraceMetricsSerializer
 from .dynatracemetadataenricher import DynatraceMetadataEnricher
 
-VERSION = "0.1.0b0"
+VERSION = "0.1.0b1"
 
 
 class DynatraceMetricsExporter(MetricsExporter):
