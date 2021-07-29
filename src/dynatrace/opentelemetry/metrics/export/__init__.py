@@ -112,7 +112,8 @@ class DynatraceMetricsExporter(MetricsExporter):
                 headers=self._headers,
             ) as resp:
                 resp.raise_for_status()
-                self.__logger.debug("got response: " + resp.content)
+                self.__logger.debug("got response: " +
+                                    resp.content.decode("utf-8"))
         except Exception as ex:
             self.__logger.warning("Failed to export metrics: %s", ex)
             return MetricsExportResult.FAILURE
