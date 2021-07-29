@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import unittest
-from collections import OrderedDict
 from typing import Union
 from unittest import mock
 
