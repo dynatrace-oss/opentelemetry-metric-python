@@ -70,7 +70,7 @@ class DynatraceMetricsSerializer:
         self,
         prefix: Optional[str] = "",
         default_dimensions: Optional[Mapping] = None,
-        oneagent_dimensions: Optional[Mapping] = None,
+        dynatrace_metadata_dimensions: Optional[Mapping] = None,
     ):
         self._prefix = prefix
         self._is_delta_export = None
@@ -81,7 +81,7 @@ class DynatraceMetricsSerializer:
             default_dimensions)
 
         self._static_dimensions = self._normalize_dimensions(
-            oneagent_dimensions)
+            dynatrace_metadata_dimensions)
         self._static_dimensions["dt.metrics.source"] = "opentelemetry"
 
     @classmethod
@@ -123,6 +123,7 @@ class DynatraceMetricsSerializer:
         metric_key = self._get_metric_key(record)
         if metric_key == "":
             return
+
         string_buffer.append(metric_key)
 
         # merge dimensions to make them unique
@@ -133,8 +134,8 @@ class DynatraceMetricsSerializer:
 
         # add the merged dimension to the string builder.
         self._write_dimensions(string_buffer, unique_dimensions)
-
         serialize_func(string_buffer, aggregator)
+
         self._write_timestamp(string_buffer, aggregator)
         string_buffer.append("\n")
 
@@ -305,10 +306,11 @@ class DynatraceMetricsSerializer:
                                 default_dimensions: typing.Dict[str, str],
                                 labels: Iterable[Tuple[str, str]],
                                 one_agent_dimensions: typing.Dict[str, str]):
-        """Merge default dimensions, user specified dimensions and OneAgent
-        dimensions. default dimensions will be overwritten by user-specified
-        dimensions, which will be overwritten by OneAgent dimensions.
-        Default and OneAgent dimensions are assumed to be normalized when
+        """Merge default dimensions, user specified dimensions and Dynatrace
+        metadata dimensions. Default dimensions will be overwritten by
+        user-specified dimensions, which will be overwritten by Dynatrace
+        metadata dimensions.
+        Default and metadata dimensions are expected to be normalized when
         they are passed to this function."""
         dims_map = {}
 
@@ -323,7 +325,7 @@ class DynatraceMetricsSerializer:
                     dims_map[key] = cls._normalize_dimension_value(v)
 
         # overwrite dimensions that the user set with the default dimensions
-        # and OneAgent metadata. Tags are normalized in __init__ so they
+        # and Dynatrace metadata. Tags are normalized in __init__ so they
         # don't have to be re-normalized here.
         if one_agent_dimensions:
             for k, v in one_agent_dimensions.items():

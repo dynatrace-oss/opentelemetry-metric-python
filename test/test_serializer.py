@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import unittest
-from collections import OrderedDict
 from typing import Union
 from unittest import mock
 
@@ -57,7 +56,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         serialized = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 555\n", serialized)
+        self.assertEqual(
+            "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 555\n",
+            serialized)
 
     def test_sum_aggregator_delta(self):
         self._meter_provider.stateful = False
@@ -67,7 +68,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         result = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 555\n", result)
+        self.assertEqual(
+            "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 555\n",
+            result)
 
     def test_min_max_sum_count_aggregator(self):
         aggregator = aggregate.MinMaxSumCountAggregator()
@@ -90,7 +93,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         result = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,20 777\n", result)
+        self.assertEqual(
+            "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,20 777\n",
+            result)
 
     def test_multiple_records(self):
         records = []
@@ -124,7 +129,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         serialized = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr,dt.metrics.source=opentelemetry count,10 555\n", serialized)
+        self.assertEqual(
+            "my.instr,dt.metrics.source=opentelemetry count,10 555\n",
+            serialized)
 
     def test_prefix(self):
         prefix = "prefix"
@@ -135,7 +142,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         result = self._serializer.serialize_records([record])
 
-        self.assertEqual("prefix.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 111\n", result)
+        self.assertEqual(
+            "prefix.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 111\n",
+            result)
 
     def test_tags(self):
         dimensions = {"t1": "tv1", "t2": "tv2"}
@@ -148,8 +157,9 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
         record = self._create_record(aggregator)
         result = self._serializer.serialize_records([record])
 
-        self.assertEqual("my.instr,t1=tv1,t2=tv2,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 111\n",
-                         result)
+        self.assertEqual(
+            "my.instr,t1=tv1,t2=tv2,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,10 111\n",
+            result)
 
     def test_invalid_name(self):
         metric = DummyMetric(".")
@@ -181,48 +191,48 @@ class TestDynatraceMetricsSerializer(unittest.TestCase):
     def test_make_unique_dimensions_empty(self):
         default_dims = {}
         user_dims = {}
-        oneagent_dims = {}
+        dynatrace_metadata_dims = {}
 
         expected = {}
         got = serializer.DynatraceMetricsSerializer._make_unique_dimensions(
-            default_dims, user_dims, oneagent_dims)
+            default_dims, user_dims, dynatrace_metadata_dims)
 
         self.assertDictEqual(expected, got)
 
     def test_make_unique_dimensions_valid(self):
         default_dims = {"dim1": "dv1", "dim2": "dv2"}
         user_dims = [("tag1", "tv1"), ("tag2", "tv2")]
-        oneagent_dims = {"one1": "val1", "one2": "val2"}
+        dynatrace_metadata_dims = {"meta1": "val1", "meta2": "val2"}
 
         expected = {"tag1": "tv1", "tag2": "tv2", "dim1": "dv1", "dim2": "dv2",
-                    "one1": "val1", "one2": "val2"}
+                    "meta1": "val1", "meta2": "val2"}
         got = serializer.DynatraceMetricsSerializer._make_unique_dimensions(
-            default_dims, user_dims, oneagent_dims)
+            default_dims, user_dims, dynatrace_metadata_dims)
 
         self.assertDictEqual(expected, got)
 
     def test_make_unique_dimensions_overwrite(self):
-        defaultDims = {"dim1": "defv1", "dim2": "defv2", "dim3": "defv3"}
+        default_dims = {"dim1": "defv1", "dim2": "defv2", "dim3": "defv3"}
         dimensions = [("dim1", "dimv2"), ("dim2", "dimv2")]
-        oneAgentDims = {"dim1": "onev1"}
+        dynatrace_metadata_dims = {"dim1": "metav1"}
 
-        expected = {"dim1": "onev1", "dim2": "dimv2", "dim3": "defv3"}
+        expected = {"dim1": "metav1", "dim2": "dimv2", "dim3": "defv3"}
         got = serializer.DynatraceMetricsSerializer._make_unique_dimensions(
-            defaultDims, dimensions, oneAgentDims)
+            default_dims, dimensions, dynatrace_metadata_dims)
         self.assertDictEqual(expected, got)
 
     def test_make_unique_dimensions_overwrite_after_normalization(self):
-        # we assume the default dimensions and OneAgent dims to be
+        # we assume the default dimensions and DT metadata dims to be
         # well-formed here as that is done in the  constructor of the
         # DynatraceMetricsExporter, so no malformed tags  should ever be
         # passed to this function.
         default_dims = {"dim1": "defv1", "dim2": "defv2"}
         dims = [("~~!@$dim1", "dimv1"), ("@#$$%dim2", "dimv2")]
-        oneagent_dims = {}
+        dynatrace_metadata_dims = {}
 
         expected = {"dim1": "dimv1", "dim2": "dimv2"}
         got = serializer.DynatraceMetricsSerializer._make_unique_dimensions(
-            default_dims, dims, oneagent_dims)
+            default_dims, dims, dynatrace_metadata_dims)
 
         self.assertDictEqual(expected, got)
 

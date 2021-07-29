@@ -16,13 +16,13 @@ import logging
 from typing import List, Mapping
 
 
-class OneAgentMetadataEnricher:
+class DynatraceMetadataEnricher:
     def __init__(self) -> None:
         self.__logger = logging.getLogger(__name__)
 
-    def add_oneagent_metadata_to_dimensions(self, tags: Mapping[str, str]):
+    def add_dynatrace_metadata_to_dimensions(self, tags: Mapping[str, str]):
         metadata_file_content = self._get_metadata_file_content()
-        parsed_metadata = self._parse_oneagent_metadata(metadata_file_content)
+        parsed_metadata = self._parse_dynatrace_metadata(metadata_file_content)
         for key, value in parsed_metadata.items():
             tags[key] = value
 
@@ -36,11 +36,11 @@ class OneAgentMetadataEnricher:
                 file_name = metadata_indirection_file.read()
 
             if not file_name:
-                self.__logger.warning("OneAgent metadata file not specified "
+                self.__logger.warning("Dynatrace metadata file not specified "
                                       "in indirection file.")
 
         except OSError:
-            self.__logger.warning("Could not read local OneAgent metadata "
+            self.__logger.warning("Could not read local Dynatrace metadata "
                                   "enrichment file. This is normal if no "
                                   "OneAgent is installed.")
 
@@ -59,11 +59,11 @@ class OneAgentMetadataEnricher:
                 return attributes_file.readlines()
         except OSError:
             self.__logger.info(
-                "Could not read OneAgent metadata file ({}).".format(
+                "Could not read Dynatrace metadata file ({}).".format(
                     metadata_file_name))
             return []
 
-    def _parse_oneagent_metadata(self, lines) -> Mapping[str, str]:
+    def _parse_dynatrace_metadata(self, lines) -> Mapping[str, str]:
         key_value_pairs = {}
         for line in lines:
             self.__logger.debug("Parsing line {}".format(line.rstrip("\n")))
