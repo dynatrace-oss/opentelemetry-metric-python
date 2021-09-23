@@ -27,7 +27,7 @@ metrics.set_meter_provider(MeterProvider())
 meter = metrics.get_meter(__name__)
 metrics.get_meter_provider().start_pipeline(meter, exporter, push_interval_sec)
 
-# crate a counter instrument and provide the first data point
+# create a counter instrument and provide the first data point
 counter = meter.create_counter(
     name="MyCounter",
     description="Description of MyCounter",
