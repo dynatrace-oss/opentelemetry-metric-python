@@ -13,142 +13,228 @@
 # limitations under the License.
 
 import unittest
+from typing import Union
 from unittest.mock import patch
+
+import requests
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import aggregate, MetricRecord, \
+    MetricsExportResult
+from opentelemetry.sdk.resources import Resource
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 
 
+class DummyMetric:
+    def __init__(self, name: str):
+        self.name = name
+
+
 class TestExporterCreation(unittest.TestCase):
-    def test_all_optional(self):
+
+    def setUp(self) -> None:
+        self._meter_provider = MeterProvider()
+        self._metric = DummyMetric("my.instr")
+        self._labels = (("l1", "v1"), ("l2", "v2"))
+        self._headers = {
+            "Accept": "*/*; q=0",
+            "Content-Type": "text/plain; charset=utf-8",
+            "User-Agent": "opentelemetry-metric-python",
+        }
+        # 01/01/2021 00:00:00
+        self._test_timestamp = 1609455600000
+
+    @patch.object(requests.Session, 'post')
+    def test_empty_records(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
         exporter = DynatraceMetricsExporter()
-        self.assertEqual("http://localhost:14499/metrics/ingest",
-                         exporter._endpoint_url)
-        self.assertEqual(3, len(exporter._headers))
-        self.assertNotIn("Authorization", exporter._headers)
-        serializer = exporter._serializer
-        self.assertEqual(None, serializer._prefix)
-        self.assertDictEqual({}, serializer._default_dimensions)
-        self.assertDictEqual({"dt.metrics.source": "opentelemetry"},
-                             serializer._static_dimensions)
+        result = exporter.export([])
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
 
-    def test_with_endpoint(self):
+        mock_post.assert_not_called()
+
+    @patch.object(requests.Session, 'post')
+    def test_all_optional(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        aggregator = aggregate.SumAggregator()
+        self._update_agg_value(aggregator, 10)
+        aggregator.last_update_timestamp = self._test_timestamp
+        record = self._create_record(aggregator)
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export([record])
+
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
+                 "count,delta=10 " + str(self._test_timestamp),
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
+    def test_with_endpoint(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
         endpoint = "https://abc1234.dynatrace.com/metrics/ingest"
+
+        aggregator = aggregate.SumAggregator()
+        self._update_agg_value(aggregator, 10)
+        aggregator.last_update_timestamp = self._test_timestamp
+        record = self._create_record(aggregator)
+
         exporter = DynatraceMetricsExporter(endpoint_url=endpoint)
+        result = exporter.export([record])
 
-        self.assertEqual(endpoint, exporter._endpoint_url)
-        self.assertEqual(3, len(exporter._headers))
-        self.assertNotIn("Authorization", exporter._headers)
-        serializer = exporter._serializer
-        self.assertEqual(None, serializer._prefix)
-        self.assertDictEqual({}, serializer._default_dimensions)
-        self.assertDictEqual({"dt.metrics.source": "opentelemetry"},
-                             serializer._static_dimensions)
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            endpoint,
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
+                 "count,delta=10 " + str(self._test_timestamp),
+            headers=self._headers)
 
-    def test_has_useragent_header(self):
-        endpoint = "https://abc1234.dynatrace.com/metrics/ingest"
-        exporter = DynatraceMetricsExporter(endpoint_url=endpoint)
+    @patch.object(requests.Session, 'post')
+    def test_with_endpoint_and_token(self, mock_post):
+        mock_post.return_value = self._get_session_response()
 
-        self.assertEqual(endpoint, exporter._endpoint_url)
-        self.assertEqual(3, len(exporter._headers))
-        self.assertIn("User-Agent", exporter._headers)
-        self.assertEqual(exporter._headers["User-Agent"],
-                         "opentelemetry-metric-python")
-
-    def test_with_endpoint_and_token(self):
         endpoint = "https://abc1234.dynatrace.com/metrics/ingest"
         token = "my.secret.token"
-        exporter = DynatraceMetricsExporter(endpoint_url=endpoint,
-                                            api_token=token)
+        # add the token to the expected headers
+        self._headers["Authorization"] = "Api-Token {}".format(token)
 
-        self.assertEqual(endpoint, exporter._endpoint_url)
-        self.assertEqual(4, len(exporter._headers))
-        self.assertEqual("Api-Token {}".format(token),
-                         exporter._headers["Authorization"])
-        serializer = exporter._serializer
-        self.assertEqual(None, serializer._prefix)
-        self.assertDictEqual({}, serializer._default_dimensions)
-        self.assertDictEqual({"dt.metrics.source": "opentelemetry"},
-                             serializer._static_dimensions)
+        aggregator = aggregate.SumAggregator()
+        self._update_agg_value(aggregator, 10)
+        aggregator.last_update_timestamp = self._test_timestamp
+        record = self._create_record(aggregator)
 
-    def test_with_only_token(self):
+        exporter = DynatraceMetricsExporter(
+            endpoint_url=endpoint, api_token=token)
+        result = exporter.export([record])
+
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            endpoint,
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
+                 "count,delta=10 " + str(self._test_timestamp),
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
+    def test_with_only_token(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        # token is not added in the expected headers
         token = "my.secret.token"
+
+        aggregator = aggregate.SumAggregator()
+        self._update_agg_value(aggregator, 10)
+        aggregator.last_update_timestamp = self._test_timestamp
+        record = self._create_record(aggregator)
+
         exporter = DynatraceMetricsExporter(api_token=token)
+        result = exporter.export([record])
 
-        self.assertEqual("http://localhost:14499/metrics/ingest",
-                         exporter._endpoint_url)
-        self.assertEqual(3, len(exporter._headers))
-        self.assertNotIn("Authorization", exporter._headers)
-        serializer = exporter._serializer
-        self.assertEqual(None, serializer._prefix)
-        self.assertDictEqual({}, serializer._default_dimensions)
-        self.assertDictEqual({"dt.metrics.source": "opentelemetry"},
-                             serializer._static_dimensions)
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
+                 "count,delta=10 " + str(self._test_timestamp),
+            headers=self._headers)
 
-    def test_with_prefix(self):
+    @patch.object(requests.Session, 'post')
+    def test_with_only_token(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        aggregator = aggregate.SumAggregator()
+        self._update_agg_value(aggregator, 10)
+        record = self._create_record(aggregator)
+
         prefix = "test_prefix"
         exporter = DynatraceMetricsExporter(prefix=prefix)
+        result = exporter.export([record])
 
-        serializer = exporter._serializer
-        self.assertEqual(prefix, serializer._prefix)
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data="{}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
+                 "count,delta=10".format(prefix),
+            headers=self._headers)
 
-    def test_with_tags(self):
+    @patch.object(requests.Session, 'post')
+    def test_with_tags(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        aggregator = aggregate.SumAggregator()
+        self._update_agg_value(aggregator, 10)
+        record = self._create_record(aggregator)
+
         tags = {"tag1": "tv1", "tag2": "tv2"}
         exporter = DynatraceMetricsExporter(default_dimensions=tags)
+        result = exporter.export([record])
 
-        serializer = exporter._serializer
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data="my.instr,tag1=tv1,tag2=tv2,l1=v1,l2=v2,"
+                 "dt.metrics.source=opentelemetry count,delta=10",
+            headers=self._headers)
 
-        expected = {"tag1": "tv1", "tag2": "tv2"}
-        self.assertDictEqual(expected, serializer._default_dimensions)
-
-    def test_with_none_tags(self):
-        exporter = DynatraceMetricsExporter(default_dimensions=None)
-
-        serializer = exporter._serializer
-        self.assertDictEqual({}, serializer._default_dimensions)
-
-    @patch('dynatrace.opentelemetry.metrics.export.dynatracemetadataenricher'
+    @patch.object(requests.Session, 'post')
+    @patch('dynatrace.metric.utils._dynatrace_metadata_enricher'
            '.DynatraceMetadataEnricher._get_metadata_file_content')
-    def test_dynatrace_metadata_enrichment_valid_tags(self, mock_func):
-        mock_func.return_value = [
-            "dynatrace_metadatatag1=dynatrace_metadatavalue1",
-            "dynatrace_metadatatag2=dynatrace_metadatavalue2"]
-        expected = {"dynatrace_metadatatag1": "dynatrace_metadatavalue1",
-                    "dynatrace_metadatatag2": "dynatrace_metadatavalue2",
-                    "dt.metrics.source": "opentelemetry"}
+    def test_dynatrace_metadata_enrichment_with_default_tags(
+            self, mock_enricher, mock_post):
+        mock_post.return_value = self._get_session_response()
 
-        exporter = DynatraceMetricsExporter(export_dynatrace_metadata=True)
-        serializer = exporter._serializer
-        self.assertDictEqual(expected, serializer._static_dimensions)
+        # tags coming from the Dynatrace metadata enricher
+        mock_enricher.return_value = [
+            "dt_mtag1=value1",
+            "dt_mtag2=value2"
+        ]
 
-    @patch('dynatrace.opentelemetry.metrics.export.dynatracemetadataenricher'
-           '.DynatraceMetadataEnricher._get_metadata_file_content')
-    def test_dynatrace_metadata_enrichment_empty_tags(self, mock_func):
-        mock_func.return_value = []
+        default_tags = {"tag1": "tv1", "tag2": "tv2"}
 
-        exporter = DynatraceMetricsExporter(export_dynatrace_metadata=True)
-        serializer = exporter._serializer
-        self.assertDictEqual({}, serializer._default_dimensions)
+        aggregator = aggregate.SumAggregator()
+        self._update_agg_value(aggregator, 10)
+        record = self._create_record(aggregator)
 
-    @patch('dynatrace.opentelemetry.metrics.export.dynatracemetadataenricher'
-           '.DynatraceMetadataEnricher._get_metadata_file_content')
-    def test_dynatrace_metadata_enrichment_empty_add_to_tags(self, mock_func):
-        mock_func.return_value = [
-            "dynatrace_metadatatag1=dynatrace_metadatavalue1",
-            "dynatrace_metadatatag2=dynatrace_metadatavalue2"]
-        dimensions = {"tag1": "tv1", "tag2": "tv2"}
+        exporter = DynatraceMetricsExporter(
+            default_dimensions=default_tags,
+            export_dynatrace_metadata=True)
+        result = exporter.export([record])
 
-        expected_default = {"tag1": "tv1", "tag2": "tv2"}
-        expected_static = {
-            "dynatrace_metadatatag1": "dynatrace_metadatavalue1",
-            "dynatrace_metadatatag2": "dynatrace_metadatavalue2",
-            "dt.metrics.source": "opentelemetry"}
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data="my.instr,tag1=tv1,tag2=tv2,l1=v1,l2=v2,"
+                 "dt_mtag1=value1,dt_mtag2=value2,"
+                 "dt.metrics.source=opentelemetry count,delta=10",
+            headers=self._headers)
 
-        exporter = DynatraceMetricsExporter(default_dimensions=dimensions,
-                                            export_dynatrace_metadata=True)
-        serializer = exporter._serializer
-        self.assertDictEqual(expected_static,
-                             serializer._static_dimensions)
-        self.assertDictEqual(expected_default, serializer._default_dimensions)
+    def _create_record(self, aggregator: aggregate.Aggregator):
+        return MetricRecord(
+            self._metric, self._labels, aggregator, Resource({})
+        )
+
+    @staticmethod
+    def _update_agg_value(
+        aggregator: aggregate.Aggregator,
+        value: Union[int, float],
+    ):
+        aggregator.update(value)
+        aggregator.take_checkpoint()
+        # can be overwritten later
+        aggregator.last_update_timestamp = 0
+
+    @staticmethod
+    def _get_session_response(error: bool = False) -> requests.Response:
+        r = requests.Response()
+        if error:
+            r.status_code = 500
+        else:
+            r.status_code = 200
+            r._content = str.encode('{}')
+        return r
 
 
 if __name__ == '__main__':

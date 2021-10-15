@@ -16,9 +16,6 @@ import logging
 import requests
 from typing import Mapping, Optional, Sequence
 
-from dynatrace.metric.utils import DynatraceMetricsFactory, DynatraceMetricsSerializer, DynatraceMetricsApiConstants, \
-    MetricError
-
 from opentelemetry.metrics import get_meter_provider
 from opentelemetry.sdk.metrics.export import (
     MetricsExporter,
@@ -26,12 +23,12 @@ from opentelemetry.sdk.metrics.export import (
     MetricsExportResult, aggregate,
 )
 
-# from dynatrace.metric.utils import (
-#     DynatraceMetricsSerializer,
-#     DynatraceMetricsApiConstants,
-#     DynatraceMetricsFactory,
-#     MetricError
-# )
+from dynatrace.metric.utils import (
+    DynatraceMetricsSerializer,
+    DynatraceMetricsApiConstants,
+    DynatraceMetricsFactory,
+    MetricError
+)
 
 VERSION = "0.1.0b1"
 
@@ -63,11 +60,12 @@ class DynatraceMetricsExporter(MetricsExporter):
             self._endpoint_url = "http://localhost:14499/metrics/ingest"
 
         self._metric_factory = DynatraceMetricsFactory()
-        self._serializer = DynatraceMetricsSerializer(self.__logger.getChild(DynatraceMetricsSerializer.__name__),
-                                                      prefix,
-                                                      default_dimensions,
-                                                      export_dynatrace_metadata,
-                                                      "opentelemetry")
+        self._serializer = DynatraceMetricsSerializer(
+            self.__logger.getChild(DynatraceMetricsSerializer.__name__),
+            prefix,
+            default_dimensions,
+            export_dynatrace_metadata,
+            "opentelemetry")
 
         self._is_delta_export = self._determine_is_delta_export()
         self._session = requests.Session()
@@ -84,7 +82,9 @@ class DynatraceMetricsExporter(MetricsExporter):
             else:
                 self._headers["Authorization"] = "Api-Token " + api_token
 
-    def export(self, metric_records: Sequence[MetricRecord]) -> MetricsExportResult:
+    def export(
+        self, metric_records: Sequence[MetricRecord]
+    ) -> MetricsExportResult:
         """
         Export a batch of metric records to Dynatrace
 
@@ -106,9 +106,11 @@ class DynatraceMetricsExporter(MetricsExporter):
         if not metric_records:
             return MetricsExportResult.SUCCESS
 
-        # split all metrics into batches of DynatraceMetricApiConstants.PayloadLinesLimit lines
+        # split all metrics into batches of
+        # DynatraceMetricApiConstants.PayloadLinesLimit lines
         chunk_size = DynatraceMetricsApiConstants.payload_lines_limit()
-        chunks = [metric_records[i:i + chunk_size] for i in range(0, len(metric_records), chunk_size)]
+        chunks = [metric_records[i:i + chunk_size] for i in
+                  range(0, len(metric_records), chunk_size)]
 
         for chunk in chunks:
             string_buffer = []
@@ -119,7 +121,8 @@ class DynatraceMetricsExporter(MetricsExporter):
                 try:
                     string_buffer.append(self._serializer.serialize(dt_metric))
                 except MetricError as ex:
-                    self.__logger.warning("Failed to serialize metric. Skipping: %s", ex)
+                    self.__logger.warning(
+                        "Failed to serialize metric. Skipping: %s", ex)
 
             serialized_records = "".join(string_buffer)
             self.__logger.debug("sending lines:\n" + serialized_records)
@@ -128,9 +131,12 @@ class DynatraceMetricsExporter(MetricsExporter):
                 return MetricsExportResult.SUCCESS
 
             try:
-                with self._session.post(self._endpoint_url, data=serialized_records, headers=self._headers) as resp:
+                with self._session.post(self._endpoint_url,
+                                        data=serialized_records,
+                                        headers=self._headers) as resp:
                     resp.raise_for_status()
-                    self.__logger.debug("got response: {}".format(resp.content.decode("utf-8")))
+                    self.__logger.debug("got response: {}".format(
+                        resp.content.decode("utf-8")))
             except Exception as ex:
                 self.__logger.warning("Failed to export metrics: %s", ex)
                 return MetricsExportResult.FAILURE
@@ -151,7 +157,8 @@ class DynatraceMetricsExporter(MetricsExporter):
                     metric.aggregator.checkpoint,
                     attrs,
                     metric.aggregator.last_update_timestamp)
-            if isinstance(metric.aggregator, aggregate.MinMaxSumCountAggregator):
+            if isinstance(metric.aggregator,
+                          aggregate.MinMaxSumCountAggregator):
                 cp = metric.aggregator.checkpoint
                 return self._metric_factory.create_float_summary(
                     metric.instrument.name,
@@ -161,7 +168,8 @@ class DynatraceMetricsExporter(MetricsExporter):
                     cp.count,
                     attrs,
                     metric.aggregator.last_update_timestamp)
-            if isinstance(metric.aggregator, aggregate.ValueObserverAggregator):
+            if isinstance(metric.aggregator,
+                          aggregate.ValueObserverAggregator):
                 return self._metric_factory.create_float_gauge(
                     metric.instrument.name,
                     metric.aggregator.checkpoint,
@@ -175,7 +183,8 @@ class DynatraceMetricsExporter(MetricsExporter):
                     metric.aggregator.last_update_timestamp)
             if isinstance(metric.aggregator, aggregate.HistogramAggregator):
                 cp = metric.aggregator.checkpoint
-                # TODO: remove this hack which pretends all data points had the same value
+                # TODO: remove this hack which pretends
+                #  all data points had the same value
                 avg = cp.sum / cp.count
                 return self._metric_factory.create_float_summary(
                     metric.instrument.name,
@@ -187,10 +196,12 @@ class DynatraceMetricsExporter(MetricsExporter):
                     metric.aggregator.last_update_timestamp)
             return None
         except MetricError as ex:
-            self.__logger.warning("Failed to create the Dynatrace metric: %s", ex)
+            self.__logger.warning("Failed to create the Dynatrace metric: %s",
+                                  ex)
             return None
 
     @staticmethod
     def _determine_is_delta_export():
         meter_provider = get_meter_provider()
-        return hasattr(meter_provider, "stateful") and not meter_provider.stateful
+        return hasattr(meter_provider,
+                       "stateful") and not meter_provider.stateful
