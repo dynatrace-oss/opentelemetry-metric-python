@@ -147,13 +147,13 @@ class DynatraceMetricsSerializer:
                 return self._write_count_value_delta
             return self._write_count_value_absolute
         if isinstance(aggregator, aggregate.MinMaxSumCountAggregator):
-            return self._write_gauge_value
+            return self._write_gauge_value # floatSummary
         if isinstance(aggregator, aggregate.ValueObserverAggregator):
-            return self._write_gauge_value
+            return self._write_gauge_value # gauge
         if isinstance(aggregator, aggregate.LastValueAggregator):
-            return self._write_count_value_absolute
+            return self._write_count_value_absolute # gauge
         if isinstance(aggregator, aggregate.HistogramAggregator):
-            return None  # Not supported
+            return None  # use either same as JS impl or Java - Summary
         return None
 
     @staticmethod
