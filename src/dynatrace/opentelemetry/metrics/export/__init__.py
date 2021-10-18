@@ -67,7 +67,7 @@ class DynatraceMetricsExporter(MetricsExporter):
             export_dynatrace_metadata,
             "opentelemetry")
 
-        self._is_delta_export = self._determine_is_delta_export()
+        self._is_delta_export = None
         self._session = requests.Session()
         self._headers = {
             "Accept": "*/*; q=0",
@@ -105,6 +105,9 @@ class DynatraceMetricsExporter(MetricsExporter):
         """
         if not metric_records:
             return MetricsExportResult.SUCCESS
+
+        if self._is_delta_export is None:
+            self._is_delta_export = self._determine_is_delta_export()
 
         # split all metrics into batches of
         # DynatraceMetricApiConstants.PayloadLinesLimit lines

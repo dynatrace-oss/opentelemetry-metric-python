@@ -14,7 +14,7 @@
 
 import unittest
 from typing import Union
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import requests
 from opentelemetry.sdk.metrics import MeterProvider
@@ -33,7 +33,6 @@ class DummyMetric:
 class TestExporterCreation(unittest.TestCase):
 
     def setUp(self) -> None:
-        self._meter_provider = MeterProvider()
         self._metric = DummyMetric("my.instr")
         self._labels = (("l1", "v1"), ("l2", "v2"))
         self._headers = {
@@ -59,7 +58,7 @@ class TestExporterCreation(unittest.TestCase):
         mock_post.return_value = self._get_session_response()
 
         aggregator = aggregate.SumAggregator()
-        self._update_agg_value(aggregator, 10)
+        self._update_value(aggregator, 10)
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter()
@@ -78,7 +77,7 @@ class TestExporterCreation(unittest.TestCase):
         endpoint = "https://abc1234.dynatrace.com/metrics/ingest"
 
         aggregator = aggregate.SumAggregator()
-        self._update_agg_value(aggregator, 10)
+        self._update_value(aggregator, 10)
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter(endpoint_url=endpoint)
@@ -100,7 +99,7 @@ class TestExporterCreation(unittest.TestCase):
         self._headers["Authorization"] = "Api-Token {}".format(token)
 
         aggregator = aggregate.SumAggregator()
-        self._update_agg_value(aggregator, 10)
+        self._update_value(aggregator, 10)
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter(
@@ -121,8 +120,7 @@ class TestExporterCreation(unittest.TestCase):
         token = "my.secret.token"
 
         aggregator = aggregate.SumAggregator()
-        self._update_agg_value(aggregator, 10)
-        aggregator.last_update_timestamp = self._test_timestamp
+        self._update_value(aggregator, 10)
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter(api_token=token)
@@ -139,7 +137,7 @@ class TestExporterCreation(unittest.TestCase):
         mock_post.return_value = self._get_session_response()
 
         aggregator = aggregate.SumAggregator()
-        self._update_agg_value(aggregator, 10)
+        self._update_value(aggregator, 10)
         record = self._create_record(aggregator)
 
         prefix = "test_prefix"
@@ -157,7 +155,7 @@ class TestExporterCreation(unittest.TestCase):
         mock_post.return_value = self._get_session_response()
 
         aggregator = aggregate.SumAggregator()
-        self._update_agg_value(aggregator, 10)
+        self._update_value(aggregator, 10)
         record = self._create_record(aggregator)
 
         tags = {"tag1": "tv1", "tag2": "tv2"}
@@ -186,7 +184,7 @@ class TestExporterCreation(unittest.TestCase):
         default_tags = {"tag1": "tv1", "tag2": "tv2"}
 
         aggregator = aggregate.SumAggregator()
-        self._update_agg_value(aggregator, 10)
+        self._update_value(aggregator, 10)
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter(
@@ -213,7 +211,7 @@ class TestExporterCreation(unittest.TestCase):
         records = []
         for n in range(4):
             aggregator = aggregate.SumAggregator()
-            self._update_agg_value(aggregator, n)
+            self._update_value(aggregator, n)
 
             if n == 3:
                 # for the last metric, we create one with an invalid name
@@ -253,7 +251,7 @@ class TestExporterCreation(unittest.TestCase):
         records = []
         for n in range(4):
             aggregator = aggregate.SumAggregator()
-            self._update_agg_value(aggregator, n)
+            self._update_value(aggregator, n)
 
             if n == 3:
                 # for the last metric, we create one with an invalid name
@@ -295,7 +293,7 @@ class TestExporterCreation(unittest.TestCase):
         records = []
         for n in range(4):
             aggregator = aggregate.SumAggregator()
-            self._update_agg_value(aggregator, n)
+            self._update_value(aggregator, n)
             records.append(self._create_record(aggregator))
 
         first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0\nmy.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1\n"
@@ -318,13 +316,50 @@ class TestExporterCreation(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
+    def test_sum_aggregator_delta(self, mock_post):
+        aggregator = aggregate.SumAggregator()
+        self._update_value(aggregator, 10)
+        aggregator.last_update_timestamp = self._test_timestamp
+
+        record = self._create_record(aggregator)
+
+        exporter = DynatraceMetricsExporter()
+        exporter._is_delta_export = MagicMock(return_value=True)
+
+        result = exporter.export([record])
+
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 " + str(self._test_timestamp) + "\n",
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
+    def test_sum_aggregator_monotonic_reported_asdelta(self, mock_post):
+        aggregator = aggregate.SumAggregator()
+        self._update_value(aggregator, 10)
+        aggregator.last_update_timestamp = self._test_timestamp
+
+        record = self._create_record(aggregator)
+
+        exporter = DynatraceMetricsExporter()
+        exporter._is_delta_export = MagicMock(return_value=False)
+        result = exporter.export([record])
+
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 " + str(self._test_timestamp) + "\n",
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
     def test_min_max_sum_count_aggregator(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
         aggregator = aggregate.MinMaxSumCountAggregator()
         aggregator.update(100)
         aggregator.update(1)
-        self._update_agg_value(aggregator, 10)
+        self._update_value(aggregator, 10)
         aggregator.last_update_timestamp = self._test_timestamp
         record = self._create_record(aggregator)
 
@@ -342,7 +377,7 @@ class TestExporterCreation(unittest.TestCase):
         mock_post.return_value = self._get_session_response()
 
         aggregator = aggregate.LastValueAggregator()
-        self._update_agg_value(aggregator, 20)
+        self._update_value(aggregator, 20)
 
         record = self._create_record(aggregator)
 
@@ -361,17 +396,17 @@ class TestExporterCreation(unittest.TestCase):
 
         records = []
         aggregator = aggregate.SumAggregator()
-        self._update_agg_value(aggregator, 10)
+        self._update_value(aggregator, 10)
         records.append(self._create_record(aggregator))
 
         aggregator = aggregate.MinMaxSumCountAggregator()
         aggregator.update(100)
         aggregator.update(1)
-        self._update_agg_value(aggregator, 10)
+        self._update_value(aggregator, 10)
         records.append(self._create_record(aggregator))
 
         aggregator = aggregate.LastValueAggregator()
-        self._update_agg_value(aggregator, 20)
+        self._update_value(aggregator, 20)
         records.append(self._create_record(aggregator))
 
         exporter = DynatraceMetricsExporter()
@@ -393,7 +428,7 @@ my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20\n"""
         )
 
     @staticmethod
-    def _update_agg_value(
+    def _update_value(
         aggregator: aggregate.Aggregator,
         value: Union[int, float],
     ):
