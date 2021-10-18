@@ -60,7 +60,6 @@ class TestExporterCreation(unittest.TestCase):
 
         aggregator = aggregate.SumAggregator()
         self._update_agg_value(aggregator, 10)
-        aggregator.last_update_timestamp = self._test_timestamp
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter()
@@ -69,8 +68,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             "http://localhost:14499/metrics/ingest",
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
-                 "count,delta=10 " + str(self._test_timestamp),
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n",
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -81,7 +79,6 @@ class TestExporterCreation(unittest.TestCase):
 
         aggregator = aggregate.SumAggregator()
         self._update_agg_value(aggregator, 10)
-        aggregator.last_update_timestamp = self._test_timestamp
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter(endpoint_url=endpoint)
@@ -90,8 +87,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
-                 "count,delta=10 " + str(self._test_timestamp),
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n",
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -105,7 +101,6 @@ class TestExporterCreation(unittest.TestCase):
 
         aggregator = aggregate.SumAggregator()
         self._update_agg_value(aggregator, 10)
-        aggregator.last_update_timestamp = self._test_timestamp
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter(
@@ -115,8 +110,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
-                 "count,delta=10 " + str(self._test_timestamp),
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n",
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -137,12 +131,11 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             "http://localhost:14499/metrics/ingest",
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
-                 "count,delta=10 " + str(self._test_timestamp),
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n",
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_with_only_token(self, mock_post):
+    def test_with_prefix(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
         aggregator = aggregate.SumAggregator()
@@ -156,8 +149,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             "http://localhost:14499/metrics/ingest",
-            data="{}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry "
-                 "count,delta=10".format(prefix),
+            data="{}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n".format(prefix),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -175,8 +167,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             "http://localhost:14499/metrics/ingest",
-            data="my.instr,tag1=tv1,tag2=tv2,l1=v1,l2=v2,"
-                 "dt.metrics.source=opentelemetry count,delta=10",
+            data="my.instr,tag1=tv1,tag2=tv2,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n",
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -208,7 +199,192 @@ class TestExporterCreation(unittest.TestCase):
             "http://localhost:14499/metrics/ingest",
             data="my.instr,tag1=tv1,tag2=tv2,l1=v1,l2=v2,"
                  "dt_mtag1=value1,dt_mtag2=value2,"
-                 "dt.metrics.source=opentelemetry count,delta=10",
+                 "dt.metrics.source=opentelemetry count,delta=10\n",
+            headers=self._headers)
+
+
+    @patch.object(requests.Session, 'post')
+    @patch('dynatrace.metric.utils.dynatrace_metrics_api_constants'
+           '.DynatraceMetricsApiConstants.payload_lines_limit')
+    def test_invalid_metricname_skipped(self, mock_const, mock_post):
+        mock_post.return_value = self._get_session_response()
+        mock_const.return_value = 2
+
+        records = []
+        for n in range(4):
+            aggregator = aggregate.SumAggregator()
+            self._update_agg_value(aggregator, n)
+
+            if n == 3:
+                # for the last metric, we create one with an invalid name
+                records.append(MetricRecord(
+                    DummyMetric(""), self._labels, aggregator, Resource({})
+                ))
+            else:
+                records.append(self._create_record(aggregator))
+
+        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0\nmy.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1\n"
+
+        # the second export misses the metric with delta=3 because the name was invalid
+        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2\n"
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export(records)
+
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+
+        mock_post.assert_any_call(
+            "http://localhost:14499/metrics/ingest",
+            data=second_expected,
+            headers=self._headers)
+
+        mock_post.assert_any_call(
+            "http://localhost:14499/metrics/ingest",
+            data=first_expected,
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
+    @patch('dynatrace.metric.utils.dynatrace_metrics_api_constants'
+           '.DynatraceMetricsApiConstants.payload_lines_limit')
+    def test_fail_to_serialize_skipped(self, mock_const, mock_post):
+        mock_post.return_value = self._get_session_response()
+        mock_const.return_value = 2
+
+        records = []
+        for n in range(4):
+            aggregator = aggregate.SumAggregator()
+            self._update_agg_value(aggregator, n)
+
+            if n == 3:
+                # for the last metric, we create one with an invalid name
+                # this will only fail when calling the serializer
+                records.append(MetricRecord(
+                    DummyMetric("."), self._labels, aggregator, Resource({})
+                ))
+            else:
+                records.append(self._create_record(aggregator))
+
+        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0\nmy.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1\n"
+
+        # the second export misses the metric with delta=3 because the name was invalid
+        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2\n"
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export(records)
+
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+
+        mock_post.assert_any_call(
+            "http://localhost:14499/metrics/ingest",
+            data=second_expected,
+            headers=self._headers)
+
+        mock_post.assert_any_call(
+            "http://localhost:14499/metrics/ingest",
+            data=first_expected,
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
+    @patch('dynatrace.metric.utils.dynatrace_metrics_api_constants'
+           '.DynatraceMetricsApiConstants.payload_lines_limit')
+    def test_entire_batch_fail(self, mock_const, mock_post):
+        mock_post.side_effect = [self._get_session_response(),
+                                 self._get_session_response(error=True)]
+        mock_const.return_value = 2
+
+        records = []
+        for n in range(4):
+            aggregator = aggregate.SumAggregator()
+            self._update_agg_value(aggregator, n)
+            records.append(self._create_record(aggregator))
+
+        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0\nmy.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1\n"
+        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2\nmy.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=3\n"
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export(records)
+
+        # should have failed the whole batch as the second POST request failed
+        self.assertEqual(MetricsExportResult.FAILURE, result)
+
+        mock_post.assert_any_call(
+            "http://localhost:14499/metrics/ingest",
+            data=first_expected,
+            headers=self._headers)
+
+        mock_post.assert_any_call(
+            "http://localhost:14499/metrics/ingest",
+            data=second_expected,
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
+    def test_min_max_sum_count_aggregator(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        aggregator = aggregate.MinMaxSumCountAggregator()
+        aggregator.update(100)
+        aggregator.update(1)
+        self._update_agg_value(aggregator, 10)
+        aggregator.last_update_timestamp = self._test_timestamp
+        record = self._create_record(aggregator)
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export([record])
+
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=100,sum=111,count=3 " + str(self._test_timestamp) + "\n",
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
+    def test_last_value_aggregator(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        aggregator = aggregate.LastValueAggregator()
+        self._update_agg_value(aggregator, 20)
+
+        record = self._create_record(aggregator)
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export([record])
+
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20\n",
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
+    def test_multiple_records(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        records = []
+        aggregator = aggregate.SumAggregator()
+        self._update_agg_value(aggregator, 10)
+        records.append(self._create_record(aggregator))
+
+        aggregator = aggregate.MinMaxSumCountAggregator()
+        aggregator.update(100)
+        aggregator.update(1)
+        self._update_agg_value(aggregator, 10)
+        records.append(self._create_record(aggregator))
+
+        aggregator = aggregate.LastValueAggregator()
+        self._update_agg_value(aggregator, 20)
+        records.append(self._create_record(aggregator))
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export(records)
+
+        expected = """my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10
+my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=100,sum=111,count=3
+my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20\n"""
+
+        self.assertEqual(MetricsExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            "http://localhost:14499/metrics/ingest",
+            data=expected,
             headers=self._headers)
 
     def _create_record(self, aggregator: aggregate.Aggregator):

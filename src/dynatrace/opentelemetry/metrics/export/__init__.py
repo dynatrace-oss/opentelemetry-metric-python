@@ -120,6 +120,7 @@ class DynatraceMetricsExporter(MetricsExporter):
                     continue
                 try:
                     string_buffer.append(self._serializer.serialize(dt_metric))
+                    string_buffer.append("\n")
                 except MetricError as ex:
                     self.__logger.warning(
                         "Failed to serialize metric. Skipping: %s", ex)
@@ -149,8 +150,12 @@ class DynatraceMetricsExporter(MetricsExporter):
             if isinstance(metric.aggregator, aggregate.SumAggregator):
                 if not self._is_delta_export:
                     self.__logger.info("Received cumulative value")
-                    # TODO: Should we convert cumulative to delta?
-                    # return self._write_count_value_absolute
+                    # TODO: implement and use a Cumulative-to-Delta converter
+                    return self._metric_factory.create_float_counter_delta(
+                        metric.instrument.name,
+                        metric.aggregator.checkpoint,
+                        attrs,
+                        metric.aggregator.last_update_timestamp)
 
                 return self._metric_factory.create_float_counter_delta(
                     metric.instrument.name,
