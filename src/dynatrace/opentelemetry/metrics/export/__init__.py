@@ -152,7 +152,7 @@ class DynatraceMetricsExporter(MetricsExporter):
             attrs = dict(metric.labels)
             if isinstance(metric.aggregator, aggregate.SumAggregator):
                 if not self._is_delta_export:
-                    self.__logger.info("Received cumulative value")
+                    self.__logger.info("Received cumulative value which is currently not supported, using delta instead.")
                     # TODO: implement and use a Cumulative-to-Delta converter
                     return self._metric_factory.create_float_counter_delta(
                         metric.instrument.name,
