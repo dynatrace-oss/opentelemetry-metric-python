@@ -16,16 +16,22 @@ import logging
 import requests
 from typing import Mapping, Optional, Sequence
 
+from opentelemetry.metrics import get_meter_provider
 from opentelemetry.sdk.metrics.export import (
     MetricsExporter,
     MetricRecord,
     MetricsExportResult,
+    aggregate,
 )
 
-from .serializer import DynatraceMetricsSerializer
-from .dynatracemetadataenricher import DynatraceMetadataEnricher
+from dynatrace.metric.utils import (
+    DynatraceMetricsSerializer,
+    DynatraceMetricsApiConstants,
+    DynatraceMetricsFactory,
+    MetricError
+)
 
-VERSION = "0.1.0b1"
+VERSION = "0.1.0b2"
 
 
 class DynatraceMetricsExporter(MetricsExporter):
@@ -38,12 +44,12 @@ class DynatraceMetricsExporter(MetricsExporter):
     """
 
     def __init__(
-        self,
-        endpoint_url: Optional[str] = None,
-        api_token: Optional[str] = None,
-        prefix: Optional[str] = None,
-        default_dimensions: Optional[Mapping[str, str]] = None,
-        export_dynatrace_metadata: Optional[bool] = False,
+            self,
+            endpoint_url: Optional[str] = None,
+            api_token: Optional[str] = None,
+            prefix: Optional[str] = None,
+            default_dimensions: Optional[Mapping[str, str]] = None,
+            export_dynatrace_metadata: Optional[bool] = False,
     ):
         self.__logger = logging.getLogger(__name__)
 
@@ -54,16 +60,15 @@ class DynatraceMetricsExporter(MetricsExporter):
                                "to default local OneAgent ingest endpoint.")
             self._endpoint_url = "http://localhost:14499/metrics/ingest"
 
-        dynatrace_metadata_dims = {}
+        self._metric_factory = DynatraceMetricsFactory()
+        self._serializer = DynatraceMetricsSerializer(
+            self.__logger.getChild(DynatraceMetricsSerializer.__name__),
+            prefix,
+            default_dimensions,
+            export_dynatrace_metadata,
+            "opentelemetry")
 
-        if export_dynatrace_metadata:
-            enricher = DynatraceMetadataEnricher()
-            enricher.add_dynatrace_metadata_to_dimensions(
-                dynatrace_metadata_dims)
-
-        self._serializer = DynatraceMetricsSerializer(prefix,
-                                                      default_dimensions,
-                                                      dynatrace_metadata_dims)
+        self._is_delta_export = None
         self._session = requests.Session()
         self._headers = {
             "Accept": "*/*; q=0",
@@ -99,22 +104,115 @@ class DynatraceMetricsExporter(MetricsExporter):
         MetricsExportResult
             Indicates SUCCESS or FAILURE
         """
-        serialized_records = self._serializer.serialize_records(metric_records)
-        self.__logger.debug("sending lines:\n" + serialized_records)
-
-        if not serialized_records:
+        if not metric_records:
             return MetricsExportResult.SUCCESS
 
-        try:
-            with self._session.post(
-                self._endpoint_url,
-                data=serialized_records,
-                headers=self._headers,
-            ) as resp:
-                resp.raise_for_status()
-                self.__logger.debug("got response: " +
-                                    resp.content.decode("utf-8"))
-        except Exception as ex:
-            self.__logger.warning("Failed to export metrics: %s", ex)
-            return MetricsExportResult.FAILURE
+        if self._is_delta_export is None:
+            self._is_delta_export = self._determine_is_delta_export()
+
+        # split all metrics into batches of
+        # DynatraceMetricApiConstants.PayloadLinesLimit lines
+        chunk_size = DynatraceMetricsApiConstants.payload_lines_limit()
+        chunks = [metric_records[i:i + chunk_size] for i in
+                  range(0, len(metric_records), chunk_size)]
+
+        for chunk in chunks:
+            string_buffer = []
+            for metric in chunk:
+                dt_metric = self._to_dynatrace_metric(metric)
+                if dt_metric is None:
+                    continue
+                try:
+                    string_buffer.append(self._serializer.serialize(dt_metric))
+                    string_buffer.append("\n")
+                except MetricError as ex:
+                    self.__logger.warning(
+                        "Failed to serialize metric. Skipping: %s", ex)
+
+            serialized_records = "".join(string_buffer)
+            self.__logger.debug("sending lines:\n" + serialized_records)
+
+            if not serialized_records:
+                return MetricsExportResult.SUCCESS
+
+            try:
+                with self._session.post(self._endpoint_url,
+                                        data=serialized_records,
+                                        headers=self._headers) as resp:
+                    resp.raise_for_status()
+                    self.__logger.debug("got response: {}".format(
+                        resp.content.decode("utf-8")))
+            except Exception as ex:
+                self.__logger.warning("Failed to export metrics: %s", ex)
+                return MetricsExportResult.FAILURE
+
         return MetricsExportResult.SUCCESS
+
+    def _to_dynatrace_metric(self, metric: MetricRecord):
+        try:
+            attrs = dict(metric.labels)
+            if isinstance(metric.aggregator, aggregate.SumAggregator):
+                if not self._is_delta_export:
+                    self.__logger.info(
+                        "Received cumulative value which is currently"
+                        " not supported, using gauge instead.")
+                    # TODO: implement and use a Cumulative-to-Delta converter
+                    return self._metric_factory.create_float_gauge(
+                        metric.instrument.name,
+                        metric.aggregator.checkpoint,
+                        attrs,
+                        metric.aggregator.last_update_timestamp)
+
+                return self._metric_factory.create_float_counter_delta(
+                    metric.instrument.name,
+                    metric.aggregator.checkpoint,
+                    attrs,
+                    metric.aggregator.last_update_timestamp)
+            if isinstance(metric.aggregator,
+                          aggregate.MinMaxSumCountAggregator):
+                cp = metric.aggregator.checkpoint
+                return self._metric_factory.create_float_summary(
+                    metric.instrument.name,
+                    cp.min,
+                    cp.max,
+                    cp.sum,
+                    cp.count,
+                    attrs,
+                    metric.aggregator.last_update_timestamp)
+            if isinstance(metric.aggregator,
+                          aggregate.ValueObserverAggregator):
+                return self._metric_factory.create_float_gauge(
+                    metric.instrument.name,
+                    metric.aggregator.checkpoint,
+                    attrs,
+                    metric.aggregator.last_update_timestamp)
+            if isinstance(metric.aggregator, aggregate.LastValueAggregator):
+                return self._metric_factory.create_float_gauge(
+                    metric.instrument.name,
+                    metric.aggregator.checkpoint,
+                    attrs,
+                    metric.aggregator.last_update_timestamp)
+            if isinstance(metric.aggregator, aggregate.HistogramAggregator):
+                cp = metric.aggregator.checkpoint
+                # TODO: remove this hack which pretends
+                #  all data points had the same value
+                avg = cp.sum / cp.count
+                return self._metric_factory.create_float_summary(
+                    metric.instrument.name,
+                    avg,
+                    avg,
+                    cp.sum,
+                    cp.count,
+                    attrs,
+                    metric.aggregator.last_update_timestamp)
+            return None
+        except MetricError as ex:
+            self.__logger.warning("Failed to create the Dynatrace metric: %s",
+                                  ex)
+            return None
+
+    @staticmethod
+    def _determine_is_delta_export():
+        meter_provider = get_meter_provider()
+        return hasattr(meter_provider,
+                       "stateful") and not meter_provider.stateful
