@@ -31,7 +31,7 @@ from dynatrace.metric.utils import (
     MetricError
 )
 
-VERSION = "0.1.0b1"
+VERSION = "0.1.0b2"
 
 
 class DynatraceMetricsExporter(MetricsExporter):
