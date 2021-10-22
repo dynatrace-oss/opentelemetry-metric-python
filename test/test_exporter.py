@@ -62,6 +62,7 @@ class TestExporterCreation(unittest.TestCase):
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter()
+        exporter._is_delta_export = True
         result = exporter.export([record])
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
@@ -81,6 +82,7 @@ class TestExporterCreation(unittest.TestCase):
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter(endpoint_url=endpoint)
+        exporter._is_delta_export = True
         result = exporter.export([record])
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
@@ -104,6 +106,7 @@ class TestExporterCreation(unittest.TestCase):
 
         exporter = DynatraceMetricsExporter(
             endpoint_url=endpoint, api_token=token)
+        exporter._is_delta_export = True
         result = exporter.export([record])
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
@@ -124,6 +127,7 @@ class TestExporterCreation(unittest.TestCase):
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter(api_token=token)
+        exporter._is_delta_export = True
         result = exporter.export([record])
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
@@ -142,6 +146,7 @@ class TestExporterCreation(unittest.TestCase):
 
         prefix = "test_prefix"
         exporter = DynatraceMetricsExporter(prefix=prefix)
+        exporter._is_delta_export = True
         result = exporter.export([record])
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
@@ -160,6 +165,7 @@ class TestExporterCreation(unittest.TestCase):
 
         tags = {"tag1": "tv1", "tag2": "tv2"}
         exporter = DynatraceMetricsExporter(default_dimensions=tags)
+        exporter._is_delta_export = True
         result = exporter.export([record])
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
@@ -190,6 +196,7 @@ class TestExporterCreation(unittest.TestCase):
         exporter = DynatraceMetricsExporter(
             default_dimensions=default_tags,
             export_dynatrace_metadata=True)
+        exporter._is_delta_export = True
         result = exporter.export([record])
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
@@ -227,6 +234,7 @@ class TestExporterCreation(unittest.TestCase):
         second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2\n"
 
         exporter = DynatraceMetricsExporter()
+        exporter._is_delta_export = True
         result = exporter.export(records)
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
@@ -268,6 +276,7 @@ class TestExporterCreation(unittest.TestCase):
         second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2\n"
 
         exporter = DynatraceMetricsExporter()
+        exporter._is_delta_export = True
         result = exporter.export(records)
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
@@ -300,6 +309,7 @@ class TestExporterCreation(unittest.TestCase):
         second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2\nmy.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=3\n"
 
         exporter = DynatraceMetricsExporter()
+        exporter._is_delta_export = True
         result = exporter.export(records)
 
         # should have failed the whole batch as the second POST request failed
@@ -324,7 +334,7 @@ class TestExporterCreation(unittest.TestCase):
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = MagicMock(return_value=True)
+        exporter._is_delta_export = True
 
         result = exporter.export([record])
 
@@ -335,7 +345,7 @@ class TestExporterCreation(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_sum_aggregator_monotonic_reported_asdelta(self, mock_post):
+    def test_sum_aggregator_total_reported_as_gauge(self, mock_post):
         aggregator = aggregate.SumAggregator()
         self._update_value(aggregator, 10)
         aggregator.last_update_timestamp = self._test_timestamp
@@ -343,13 +353,13 @@ class TestExporterCreation(unittest.TestCase):
         record = self._create_record(aggregator)
 
         exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = MagicMock(return_value=False)
+        exporter._is_delta_export = False
         result = exporter.export([record])
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             "http://localhost:14499/metrics/ingest",
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 " + str(self._test_timestamp) + "\n",
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 " + str(self._test_timestamp) + "\n",
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -410,6 +420,7 @@ class TestExporterCreation(unittest.TestCase):
         records.append(self._create_record(aggregator))
 
         exporter = DynatraceMetricsExporter()
+        exporter._is_delta_export = True
         result = exporter.export(records)
 
         expected = """my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10

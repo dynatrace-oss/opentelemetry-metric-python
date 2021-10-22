@@ -20,7 +20,8 @@ from opentelemetry.metrics import get_meter_provider
 from opentelemetry.sdk.metrics.export import (
     MetricsExporter,
     MetricRecord,
-    MetricsExportResult, aggregate,
+    MetricsExportResult,
+    aggregate,
 )
 
 from dynatrace.metric.utils import (
@@ -154,9 +155,9 @@ class DynatraceMetricsExporter(MetricsExporter):
                 if not self._is_delta_export:
                     self.__logger.info(
                         "Received cumulative value which is currently"
-                        " not supported, using delta instead.")
+                        " not supported, using gauge instead.")
                     # TODO: implement and use a Cumulative-to-Delta converter
-                    return self._metric_factory.create_float_counter_delta(
+                    return self._metric_factory.create_float_gauge(
                         metric.instrument.name,
                         metric.aggregator.checkpoint,
                         attrs,
