@@ -42,6 +42,7 @@ class TestExporterCreation(unittest.TestCase):
         }
         # 01/01/2021 00:00:00
         self._test_timestamp = 1609455600000
+        self._ingest_endpoint = "http://localhost:14499/metrics/ingest"
 
     @patch.object(requests.Session, 'post')
     def test_empty_records(self, mock_post):
@@ -67,7 +68,7 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n",
             headers=self._headers)
 
@@ -132,7 +133,7 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n",
             headers=self._headers)
 
@@ -151,7 +152,7 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data="{}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n".format(prefix),
             headers=self._headers)
 
@@ -170,7 +171,7 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data="my.instr,tag1=tv1,tag2=tv2,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10\n",
             headers=self._headers)
 
@@ -201,7 +202,7 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data="my.instr,tag1=tv1,tag2=tv2,l1=v1,l2=v2,"
                  "dt_mtag1=value1,dt_mtag2=value2,"
                  "dt.metrics.source=opentelemetry count,delta=10\n",
@@ -240,12 +241,12 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricsExportResult.SUCCESS, result)
 
         mock_post.assert_any_call(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data=second_expected,
             headers=self._headers)
 
         mock_post.assert_any_call(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data=first_expected,
             headers=self._headers)
 
@@ -282,12 +283,12 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricsExportResult.SUCCESS, result)
 
         mock_post.assert_any_call(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data=second_expected,
             headers=self._headers)
 
         mock_post.assert_any_call(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data=first_expected,
             headers=self._headers)
 
@@ -316,12 +317,12 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricsExportResult.FAILURE, result)
 
         mock_post.assert_any_call(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data=first_expected,
             headers=self._headers)
 
         mock_post.assert_any_call(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data=second_expected,
             headers=self._headers)
 
@@ -340,7 +341,7 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 " + str(self._test_timestamp) + "\n",
             headers=self._headers)
 
@@ -358,7 +359,7 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 " + str(self._test_timestamp) + "\n",
             headers=self._headers)
 
@@ -378,7 +379,7 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=100,sum=111,count=3 " + str(self._test_timestamp) + "\n",
             headers=self._headers)
 
@@ -396,7 +397,7 @@ class TestExporterCreation(unittest.TestCase):
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20\n",
             headers=self._headers)
 
@@ -429,7 +430,7 @@ my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20\n"""
 
         self.assertEqual(MetricsExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
-            "http://localhost:14499/metrics/ingest",
+            self._ingest_endpoint,
             data=expected,
             headers=self._headers)
 
