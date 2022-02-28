@@ -15,6 +15,7 @@
 import unittest
 from unittest.mock import patch
 
+import pytest
 import requests
 from opentelemetry.sdk._metrics.export import Metric, \
     MetricExportResult
@@ -206,6 +207,56 @@ class TestExporterCreation(unittest.TestCase):
     @patch.object(requests.Session, 'post')
     @patch('dynatrace.metric.utils.dynatrace_metrics_api_constants'
            '.DynatraceMetricsApiConstants.payload_lines_limit')
+    def test_fail_to_serialize_skipped(self, mock_const, mock_post):
+        mock_post.return_value = self._get_session_response()
+        mock_const.return_value = 2
+
+        metrics = []
+        for n in range(4):
+            data_point = self._create_sum_data_point(n)
+
+            if n == 3:
+                # for the last metric, we create one with an invalid name
+                # this will only fail when calling the serializer
+                metric = Metric(attributes=self._attributes,
+                                name=".",
+                                point=data_point,
+                                description="",
+                                unit="1",
+                                resource=Resource({}),
+                                instrumentation_info=InstrumentationInfo(
+                                    name="dynatrace.opentelemetry.metrics.export",
+                                    version="0.0.1"))
+                metrics.append(metric)
+            else:
+                metrics.append(self._create_record(data_point))
+
+        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\nmy.instr,l1=v1," \
+                         "l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n".format(self._test_timestamp_millis)
+
+        # the second export misses the metric with delta=3 because the name was invalid
+        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n".format(
+            str(self._test_timestamp_millis))
+
+        exporter = DynatraceMetricsExporter()
+        exporter._is_delta_export = True
+        result = exporter.export(metrics)
+
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+
+        mock_post.assert_any_call(
+            self._ingest_endpoint,
+            data=second_expected,
+            headers=self._headers)
+
+        mock_post.assert_any_call(
+            self._ingest_endpoint,
+            data=first_expected,
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
+    @patch('dynatrace.metric.utils.dynatrace_metrics_api_constants'
+           '.DynatraceMetricsApiConstants.payload_lines_limit')
     def test_invalid_metricname_skipped(self, mock_const, mock_post):
         mock_post.return_value = self._get_session_response()
         mock_const.return_value = 2
@@ -233,59 +284,6 @@ class TestExporterCreation(unittest.TestCase):
         # the second export misses the metric with delta=3 because the name was invalid
         second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n" \
             .format(self._test_timestamp_millis)
-
-        exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = True
-        result = exporter.export(metrics)
-
-        self.assertEqual(MetricExportResult.SUCCESS, result)
-
-        mock_post.assert_any_call(
-            self._ingest_endpoint,
-            data=second_expected,
-            headers=self._headers)
-
-        mock_post.assert_any_call(
-            self._ingest_endpoint,
-            data=first_expected,
-            headers=self._headers)
-
-    @patch.object(requests.Session, 'post')
-    @patch('dynatrace.metric.utils.dynatrace_metrics_api_constants'
-           '.DynatraceMetricsApiConstants.payload_lines_limit')
-    def test_fail_to_serialize_skipped(self, mock_const, mock_post):
-        mock_post.return_value = self._get_session_response()
-        mock_const.return_value = 2
-
-        metrics = []
-        timestamps = []
-        for n in range(4):
-            data_point = self._create_sum_data_point(n)
-
-            if n == 3:
-                # for the last metric, we create one with an invalid name
-                # this will only fail when calling the serializer
-                metric = Metric(attributes=self._attributes,
-                                name=".",
-                                point=data_point,
-                                description="",
-                                unit="1",
-                                resource=Resource({}),
-                                instrumentation_info=InstrumentationInfo(
-                                    name="dynatrace.opentelemetry.metrics.export",
-                                    version="0.0.1"))
-                timestamps.append(int(data_point.time_unix_nano / 1000000))
-                metrics.append(metric)
-            else:
-                metrics.append(self._create_record(data_point))
-                timestamps.append(int(data_point.time_unix_nano / 1000000))
-
-        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\nmy.instr,l1=v1," \
-                         "l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n".format(self._test_timestamp_millis)
-
-        # the second export misses the metric with delta=3 because the name was invalid
-        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n".format(
-            str(self._test_timestamp_millis))
 
         exporter = DynatraceMetricsExporter()
         exporter._is_delta_export = True
@@ -385,7 +383,7 @@ class TestExporterCreation(unittest.TestCase):
         result = exporter.export(records)
 
         expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}\n" \
-                   "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20 {0}\n"\
+                   "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20 {0}\n" \
             .format(int(self._test_timestamp_nanos / 1000000))
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
