@@ -16,12 +16,12 @@ import logging
 import requests
 from typing import Mapping, Optional, Sequence
 
-from opentelemetry.metrics import get_meter_provider
-from opentelemetry.sdk.metrics.export import (
-    MetricsExporter,
-    MetricRecord,
-    MetricsExportResult,
-    aggregate,
+from opentelemetry._metrics import get_meter_provider
+
+from opentelemetry.sdk._metrics.export import (
+    MetricExporter,
+    Metric,
+    MetricExportResult,
 )
 
 from dynatrace.metric.utils import (
@@ -30,11 +30,12 @@ from dynatrace.metric.utils import (
     DynatraceMetricsFactory,
     MetricError
 )
+from opentelemetry.sdk._metrics.point import Sum, AggregationTemporality, Gauge, Histogram
 
 VERSION = "0.1.0b2"
 
 
-class DynatraceMetricsExporter(MetricsExporter):
+class DynatraceMetricsExporter(MetricExporter):
     """
     A class which implements the OpenTelemetry MetricsExporter interface
 
@@ -83,16 +84,19 @@ class DynatraceMetricsExporter(MetricsExporter):
             else:
                 self._headers["Authorization"] = "Api-Token " + api_token
 
+    def preferred_temporality(self) -> AggregationTemporality:
+        return AggregationTemporality.DELTA
+
     def export(
-        self, metric_records: Sequence[MetricRecord]
-    ) -> MetricsExportResult:
+            self, metric_records: Sequence[Metric]
+    ) -> MetricExportResult:
         """
         Export a batch of metric records to Dynatrace
 
         Parameters
         ----------
-        metric_records : Sequence[MetricRecord], required
-            A sequence of metric records to be exported
+        metric_records : Sequence[Metric], required
+            A sequence of metrics to be exported
 
         Raises
         ------
@@ -101,14 +105,11 @@ class DynatraceMetricsExporter(MetricsExporter):
 
         Returns
         -------
-        MetricsExportResult
+        MetricExportResult
             Indicates SUCCESS or FAILURE
         """
         if not metric_records:
-            return MetricsExportResult.SUCCESS
-
-        if self._is_delta_export is None:
-            self._is_delta_export = self._determine_is_delta_export()
+            return MetricExportResult.SUCCESS
 
         # split all metrics into batches of
         # DynatraceMetricApiConstants.PayloadLinesLimit lines
@@ -133,7 +134,7 @@ class DynatraceMetricsExporter(MetricsExporter):
             self.__logger.debug("sending lines:\n" + serialized_records)
 
             if not serialized_records:
-                return MetricsExportResult.SUCCESS
+                return MetricExportResult.SUCCESS
 
             try:
                 with self._session.post(self._endpoint_url,
@@ -144,68 +145,58 @@ class DynatraceMetricsExporter(MetricsExporter):
                         resp.content.decode("utf-8")))
             except Exception as ex:
                 self.__logger.warning("Failed to export metrics: %s", ex)
-                return MetricsExportResult.FAILURE
+                return MetricExportResult.FAILURE
 
-        return MetricsExportResult.SUCCESS
+        return MetricExportResult.SUCCESS
 
-    def _to_dynatrace_metric(self, metric: MetricRecord):
+    def _to_dynatrace_metric(self, metric: Metric):
         try:
-            attrs = dict(metric.labels)
-            if isinstance(metric.aggregator, aggregate.SumAggregator):
-                if not self._is_delta_export:
-                    self.__logger.info(
-                        "Received cumulative value which is currently"
-                        " not supported, using gauge instead.")
-                    # TODO: implement and use a Cumulative-to-Delta converter
-                    return self._metric_factory.create_float_gauge(
-                        metric.instrument.name,
-                        metric.aggregator.checkpoint,
+            attrs = dict(metric.attributes)
+            if isinstance(metric.point, Sum):
+                if isinstance(metric.point.value, float):
+                    return self._metric_factory.create_float_counter_delta(
+                        metric.name,
+                        metric.point.value,
                         attrs,
-                        metric.aggregator.last_update_timestamp)
+                        int(metric.point.time_unix_nano / 1000000))
+                if isinstance(metric.point.value, int):
+                    return self._metric_factory.create_int_counter_delta(
+                        metric.name,
+                        metric.point.value,
+                        attrs,
+                        int(metric.point.time_unix_nano / 1000000))
 
-                return self._metric_factory.create_float_counter_delta(
-                    metric.instrument.name,
-                    metric.aggregator.checkpoint,
-                    attrs,
-                    metric.aggregator.last_update_timestamp)
-            if isinstance(metric.aggregator,
-                          aggregate.MinMaxSumCountAggregator):
-                cp = metric.aggregator.checkpoint
+            if isinstance(metric.point, Gauge):
+                if isinstance(metric.point.value, float):
+                    return self._metric_factory.create_float_gauge(
+                        metric.name,
+                        metric.point.value,
+                        attrs,
+                        int(metric.point.time_unix_nano / 1000000))
+                if isinstance(metric.point.value, int):
+                    return self._metric_factory.create_int_gauge(
+                        metric.name,
+                        metric.point.value,
+                        attrs,
+                        int(metric.point.time_unix_nano / 1000000))
+
+            if isinstance(metric.point, Histogram):
+                count = sum(metric.point.bucket_counts)
+                histogram_sum = sum([a * b for a, b in zip(metric.point.bucket_counts, metric.point.explicit_bounds)])
+                avg = histogram_sum / count
+
                 return self._metric_factory.create_float_summary(
-                    metric.instrument.name,
-                    cp.min,
-                    cp.max,
-                    cp.sum,
-                    cp.count,
-                    attrs,
-                    metric.aggregator.last_update_timestamp)
-            if isinstance(metric.aggregator,
-                          aggregate.ValueObserverAggregator):
-                return self._metric_factory.create_float_gauge(
-                    metric.instrument.name,
-                    metric.aggregator.checkpoint,
-                    attrs,
-                    metric.aggregator.last_update_timestamp)
-            if isinstance(metric.aggregator, aggregate.LastValueAggregator):
-                return self._metric_factory.create_float_gauge(
-                    metric.instrument.name,
-                    metric.aggregator.checkpoint,
-                    attrs,
-                    metric.aggregator.last_update_timestamp)
-            if isinstance(metric.aggregator, aggregate.HistogramAggregator):
-                cp = metric.aggregator.checkpoint
-                # TODO: remove this hack which pretends
-                #  all data points had the same value
-                avg = cp.sum / cp.count
-                return self._metric_factory.create_float_summary(
-                    metric.instrument.name,
+                    metric.name,
                     avg,
                     avg,
-                    cp.sum,
-                    cp.count,
+                    histogram_sum,
+                    count,
                     attrs,
-                    metric.aggregator.last_update_timestamp)
-            return None
+                    metric.point.time_unix_nano)
+
+            self.__logger.warning("Failed to create a Dynatrace metric, unsupported metric point type: %s",
+                                  type(metric.point).__name__)
+
         except MetricError as ex:
             self.__logger.warning("Failed to create the Dynatrace metric: %s",
                                   ex)
@@ -216,3 +207,6 @@ class DynatraceMetricsExporter(MetricsExporter):
         meter_provider = get_meter_provider()
         return hasattr(meter_provider,
                        "stateful") and not meter_provider.stateful
+
+    def shutdown(self) -> None:
+        return
