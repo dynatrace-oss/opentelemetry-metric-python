@@ -16,8 +16,6 @@ import logging
 import requests
 from typing import Mapping, Optional, Sequence
 
-from opentelemetry._metrics import get_meter_provider
-
 from opentelemetry.sdk._metrics.export import (
     MetricExporter,
     Metric,
@@ -69,7 +67,6 @@ class DynatraceMetricsExporter(MetricExporter):
             export_dynatrace_metadata,
             "opentelemetry")
 
-        self._is_delta_export = None
         self._session = requests.Session()
         self._headers = {
             "Accept": "*/*; q=0",
@@ -182,17 +179,16 @@ class DynatraceMetricsExporter(MetricExporter):
 
             if isinstance(metric.point, Histogram):
                 count = sum(metric.point.bucket_counts)
-                histogram_sum = sum([a * b for a, b in zip(metric.point.bucket_counts, metric.point.explicit_bounds)])
-                avg = histogram_sum / count
+                avg = metric.point.sum / count
 
                 return self._metric_factory.create_float_summary(
                     metric.name,
                     avg,
                     avg,
-                    histogram_sum,
+                    metric.point.sum,
                     count,
                     attrs,
-                    metric.point.time_unix_nano)
+                    int(metric.point.time_unix_nano / 1000000))
 
             self.__logger.warning("Failed to create a Dynatrace metric, unsupported metric point type: %s",
                                   type(metric.point).__name__)
@@ -201,12 +197,6 @@ class DynatraceMetricsExporter(MetricExporter):
             self.__logger.warning("Failed to create the Dynatrace metric: %s",
                                   ex)
             return None
-
-    @staticmethod
-    def _determine_is_delta_export():
-        meter_provider = get_meter_provider()
-        return hasattr(meter_provider,
-                       "stateful") and not meter_provider.stateful
 
     def shutdown(self) -> None:
         return

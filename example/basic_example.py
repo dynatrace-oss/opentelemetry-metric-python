@@ -11,10 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from opentelemetry.sdk._metrics.export import PeriodicExportingMetricReader
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
-from opentelemetry import metrics
-from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry import _metrics
+from opentelemetry.sdk._metrics import MeterProvider
 
 from os.path import splitext, basename
 import argparse
@@ -96,11 +97,17 @@ if __name__ == '__main__':
             "OneAgent endpoint.")
 
     # set up OpenTelemetry for export:
+    # This call sets up the MeterProvider, with a PeriodicExportingMetricReader that exports ever 5000 ms
     logger.debug("setting up global OpenTelemetry configuration.")
-    metrics.set_meter_provider(MeterProvider())
-    meter = metrics.get_meter(splitext(basename(__file__))[0])
+    _metrics.set_meter_provider(MeterProvider(
+        metric_readers=[PeriodicExportingMetricReader(
+            export_interval_millis=5000,
+            exporter=DynatraceMetricsExporter(args.endpoint, args.token,
+                                              prefix="otel.python",
+                                              export_dynatrace_metadata=args.metadata_enrichment))]))
 
-    logger.info("setting up Dynatrace metrics exporting interface.")
+    meter = _metrics.get_meter(splitext(basename(__file__))[0])
+
     exporter = DynatraceMetricsExporter(args.endpoint, args.token,
                                         prefix="otel.python",
                                         export_dynatrace_metadata=
@@ -108,43 +115,32 @@ if __name__ == '__main__':
 
     logger.info("registering Dynatrace exporter with the global OpenTelemetry"
                 " instance...")
-    # This call registers the meter and exporter with the global
-    # MeterProvider set above. All instruments created by the meter that is
-    # registered here will export to the Dynatrace metrics exporter. It is a
-    # good idea to keep a reference to the meter (e. g. in a global variable)
-    # in order to create instruments anywhere in the code that all export to
-    # the same Dynatrace metrics exporter.
-    metrics.get_meter_provider().start_pipeline(meter, exporter, args.interval)
 
     logger.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
         name="requests",
         description="number of requests",
-        unit="1",
-        value_type=int
+        unit="1"
     )
 
-    requests_size = meter.create_valuerecorder(
+    requests_size = meter.create_histogram(
         name="request_size_bytes",
         description="size of requests",
         unit="byte",
-        value_type=int,
     )
 
-    vo = meter.register_valueobserver(
+    vo = meter.create_observable_gauge(
         callback=get_cpu_usage_callback,
         name="cpu_percent",
         description="per-cpu usage",
-        unit="1",
-        value_type=float,
+        unit="1"
     )
 
-    meter.register_valueobserver(
+    meter.create_observable_gauge(
         callback=get_ram_usage_callback,
         name="ram_percent",
         description="RAM memory usage",
         unit="1",
-        value_type=float,
     )
 
     # Labels are used to identify key-values that are associated with a

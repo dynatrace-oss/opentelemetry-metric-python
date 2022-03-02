@@ -11,15 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import unittest
 from unittest.mock import patch
 
-import pytest
 import requests
 from opentelemetry.sdk._metrics.export import Metric, \
     MetricExportResult
-from opentelemetry.sdk._metrics.point import PointT, Gauge, Sum, AggregationTemporality
+from opentelemetry.sdk._metrics.point import PointT, Gauge, Sum, AggregationTemporality, Histogram
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.util.instrumentation import InstrumentationInfo
 
@@ -314,11 +312,11 @@ class TestExporterCreation(unittest.TestCase):
             metrics.append(self._create_record(self._create_sum_data_point(n)))
 
         first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\n" \
-                         "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n".format(
-            self._test_timestamp_millis)
+                         "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
+            .format(self._test_timestamp_millis)
         second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n" \
-                          "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=3 {0}\n".format(
-            self._test_timestamp_millis)
+                          "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=3 {0}\n" \
+            .format(self._test_timestamp_millis)
 
         exporter = DynatraceMetricsExporter()
         exporter._is_delta_export = True
@@ -338,7 +336,7 @@ class TestExporterCreation(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_sum_aggregator_delta(self, mock_post):
+    def test_sum_delta(self, mock_post):
         metric = self._create_record(self._create_sum_data_point(10))
 
         exporter = DynatraceMetricsExporter()
@@ -354,7 +352,7 @@ class TestExporterCreation(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_gauge_aggregator_total_reported_as_gauge(self, mock_post):
+    def test_gauge_reported_as_gauge(self, mock_post):
         data_point = Gauge(value=10,
                            time_unix_nano=self._test_timestamp_nanos)
         metric = self._create_record(data_point)
@@ -371,20 +369,46 @@ class TestExporterCreation(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
+    def test_histogram_reported_as_gauge(self, mock_post):
+        data_point = Histogram(bucket_counts=[1, 2, 4, 5],
+                               explicit_bounds=[0, 5, 10],
+                               sum=36,
+                               aggregation_temporality=AggregationTemporality.DELTA,
+                               time_unix_nano=self._test_timestamp_nanos,
+                               start_time_unix_nano=self._test_timestamp_nanos)
+        metric = self._create_record(data_point)
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export([metric])
+
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            self._ingest_endpoint,
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=3,max=3,sum=36,count=12 {0}\n"
+                .format(str(int(self._test_timestamp_nanos / 1000000))),
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
     def test_multiple_records(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
         records = []
         records.append(self._create_record(self._create_sum_data_point(10)))
         records.append(self._create_record(Gauge(time_unix_nano=self._test_timestamp_nanos, value=20)))
-
+        records.append(self._create_record(Histogram(bucket_counts=[1, 2, 4, 5],
+                                                     explicit_bounds=[0, 5, 10],
+                                                     sum=36,
+                                                     aggregation_temporality=AggregationTemporality.DELTA,
+                                                     time_unix_nano=self._test_timestamp_nanos,
+                                                     start_time_unix_nano=self._test_timestamp_nanos)))
         exporter = DynatraceMetricsExporter()
         exporter._is_delta_export = True
         result = exporter.export(records)
 
         expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}\n" \
                    "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20 {0}\n" \
-            .format(int(self._test_timestamp_nanos / 1000000))
+                   "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=3,max=3,sum=36,count=12 {0}\n" \
+            .format(int(self._test_timestamp_millis))
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
