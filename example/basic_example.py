@@ -97,7 +97,8 @@ if __name__ == '__main__':
             "OneAgent endpoint.")
 
     # set up OpenTelemetry for export:
-    # This call sets up the MeterProvider, with a PeriodicExportingMetricReader that exports ever 5000 ms
+    # This call sets up the MeterProvider, with a PeriodicExportingMetricReader that exports every 5000 ms
+    # and the Dynatrace exporter exporting to args.endpoint with args.token
     logger.debug("setting up global OpenTelemetry configuration.")
     _metrics.set_meter_provider(MeterProvider(
         metric_readers=[PeriodicExportingMetricReader(

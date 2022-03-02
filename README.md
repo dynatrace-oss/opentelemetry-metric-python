@@ -23,9 +23,13 @@ The general setup of OpenTelemetry Python is explained in the official [Getting 
 exporter = DynatraceMetricsExporter(endpoint_url, api_token)
 
 # setup metrics export pipeline
-metrics.set_meter_provider(MeterProvider())
-meter = metrics.get_meter(__name__)
-metrics.get_meter_provider().start_pipeline(meter, exporter, push_interval_sec)
+_metrics.set_meter_provider(MeterProvider(
+        metric_readers=[PeriodicExportingMetricReader(
+            export_interval_millis=5000,
+            exporter=exporter)]))
+
+# get a meter
+meter = _metrics.get_meter(__name__)
 
 # create a counter instrument and provide the first data point
 counter = meter.create_counter(
