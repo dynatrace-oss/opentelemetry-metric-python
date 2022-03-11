@@ -81,6 +81,7 @@ class DynatraceMetricsExporter(MetricExporter):
             else:
                 self._headers["Authorization"] = "Api-Token " + api_token
 
+    @property
     def preferred_temporality(self) -> AggregationTemporality:
         return AggregationTemporality.DELTA
 

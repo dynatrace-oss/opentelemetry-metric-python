@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from opentelemetry._metrics.measurement import Measurement
 from opentelemetry.sdk._metrics.export import PeriodicExportingMetricReader
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
@@ -27,16 +28,16 @@ import time
 
 
 # Callback to gather cpu usage
-def get_cpu_usage_callback(observer):
+def get_cpu_usage_callback():
     for (number, percent) in enumerate(psutil.cpu_percent(percpu=True)):
-        labels = {"cpu_number": str(number)}
-        observer.observe(percent, labels)
+        attributes = {"cpu_number": str(number)}
+        yield Measurement(number, attributes)
 
 
 # Callback to gather RAM memory usage
-def get_ram_usage_callback(observer):
+def get_ram_usage_callback():
     ram_percent = psutil.virtual_memory().percent
-    observer.observe(ram_percent, {})
+    yield Measurement(ram_percent)
 
 
 def parse_arguments():
@@ -144,22 +145,22 @@ if __name__ == '__main__':
         unit="1",
     )
 
-    # Labels are used to identify key-values that are associated with a
+    # Attributes are used to identify key-values that are associated with a
     # specific metric that you want to record. These are useful for
     # pre-aggregation and can be used to store custom dimensions pertaining
     # to a metric
-    staging_labels = {"environment": "staging"}
-    testing_labels = {"environment": "testing"}
+    staging_attributes = {"environment": "staging"}
+    testing_attributes = {"environment": "testing"}
 
     logger.info("starting instrumented application...")
     try:
         while True:
             # Update the metric instruments using the direct calling convention
-            requests_counter.add(random.randint(0, 25), staging_labels)
-            requests_size.record(random.randint(0, 300), staging_labels)
+            requests_counter.add(random.randint(0, 25), staging_attributes)
+            requests_size.record(random.randint(0, 300), staging_attributes)
 
-            requests_counter.add(random.randint(0, 35), testing_labels)
-            requests_size.record(random.randint(0, 100), testing_labels)
+            requests_counter.add(random.randint(0, 35), testing_attributes)
+            requests_size.record(random.randint(0, 100), testing_attributes)
             time.sleep(5)
 
     except KeyboardInterrupt:
