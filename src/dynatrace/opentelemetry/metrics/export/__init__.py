@@ -28,9 +28,13 @@ from dynatrace.metric.utils import (
     DynatraceMetricsFactory,
     MetricError
 )
-from opentelemetry.sdk._metrics.point import Sum, AggregationTemporality, Gauge, Histogram
+from opentelemetry.sdk._metrics.point import (
+    Sum,
+    AggregationTemporality,
+    Gauge,
+    Histogram)
 
-VERSION = "0.1.0b2"
+VERSION = "0.2.0b0"
 
 
 class DynatraceMetricsExporter(MetricExporter):
@@ -191,7 +195,8 @@ class DynatraceMetricsExporter(MetricExporter):
                     attrs,
                     int(metric.point.time_unix_nano / 1000000))
 
-            self.__logger.warning("Failed to create a Dynatrace metric, unsupported metric point type: %s",
+            self.__logger.warning("Failed to create a Dynatrace metric, "
+                                  "unsupported metric point type: %s",
                                   type(metric.point).__name__)
 
         except MetricError as ex:
