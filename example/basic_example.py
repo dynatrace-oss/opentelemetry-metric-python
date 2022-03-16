@@ -128,7 +128,7 @@ if __name__ == '__main__':
     requests_size = meter.create_histogram(
         name="request_size_bytes",
         description="size of requests",
-        unit="byte",
+        unit="byte"
     )
 
     vo = meter.create_observable_gauge(

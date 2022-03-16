@@ -64,7 +64,6 @@ class TestExporterCreation(unittest.TestCase):
         metric = self._create_record(self._create_sum_data_point(10))
 
         exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = True
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -84,7 +83,6 @@ class TestExporterCreation(unittest.TestCase):
         metric = self._create_record(self._create_sum_data_point(10))
 
         exporter = DynatraceMetricsExporter(endpoint_url=endpoint)
-        exporter._is_delta_export = True
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -107,7 +105,6 @@ class TestExporterCreation(unittest.TestCase):
         metric = self._create_record(self._create_sum_data_point(10))
 
         exporter = DynatraceMetricsExporter(endpoint_url=endpoint, api_token=token)
-        exporter._is_delta_export = True
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -128,7 +125,6 @@ class TestExporterCreation(unittest.TestCase):
         metric = self._create_record(self._create_sum_data_point(10))
 
         exporter = DynatraceMetricsExporter(api_token=token)
-        exporter._is_delta_export = True
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -147,14 +143,13 @@ class TestExporterCreation(unittest.TestCase):
 
         prefix = "test_prefix"
         exporter = DynatraceMetricsExporter(prefix=prefix)
-        exporter._is_delta_export = True
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="{0}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {1}\n".format(prefix,
-                                                                                                        self._test_timestamp_millis),
+            data="{0}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {1}\n"
+                .format(prefix, self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -165,7 +160,6 @@ class TestExporterCreation(unittest.TestCase):
 
         tags = {"tag1": "tv1", "tag2": "tv2"}
         exporter = DynatraceMetricsExporter(default_dimensions=tags)
-        exporter._is_delta_export = True
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -196,7 +190,6 @@ class TestExporterCreation(unittest.TestCase):
         exporter = DynatraceMetricsExporter(
             default_dimensions=default_tags,
             export_dynatrace_metadata=True)
-        exporter._is_delta_export = True
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -236,15 +229,15 @@ class TestExporterCreation(unittest.TestCase):
             else:
                 metrics.append(self._create_record(data_point))
 
-        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\nmy.instr,l1=v1," \
-                         "l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n".format(self._test_timestamp_millis)
+        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\n" \
+                         "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
+            .format(self._test_timestamp_millis)
 
         # the second export misses the metric with delta=3 because the name was invalid
-        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n".format(
-            str(self._test_timestamp_millis))
+        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n" \
+            .format(str(self._test_timestamp_millis))
 
         exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = True
         result = exporter.export(metrics)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -283,15 +276,15 @@ class TestExporterCreation(unittest.TestCase):
             else:
                 metrics.append(self._create_record(data_point))
 
-        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\nmy.instr,l1=v1," \
-                         "l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n".format(self._test_timestamp_millis)
+        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\n" \
+                         "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
+            .format(self._test_timestamp_millis)
 
         # the second export misses the metric with delta=3 because the name was invalid
         second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n" \
             .format(self._test_timestamp_millis)
 
         exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = True
         result = exporter.export(metrics)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -326,7 +319,6 @@ class TestExporterCreation(unittest.TestCase):
             .format(self._test_timestamp_millis)
 
         exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = True
         result = exporter.export(metrics)
 
         # should have failed the whole batch as the second POST request failed
@@ -347,7 +339,6 @@ class TestExporterCreation(unittest.TestCase):
         metric = self._create_record(self._create_sum_data_point(10))
 
         exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = True
 
         result = exporter.export([metric])
 
@@ -359,20 +350,34 @@ class TestExporterCreation(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
+    def test_sum_delta_non_monotonic(self, mock_post):
+        metric = self._create_record(self._create_sum_data_point(250, monotonic=False))
+
+        exporter = DynatraceMetricsExporter()
+
+        result = exporter.export([metric])
+
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            self._ingest_endpoint,
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=250 {0}\n"
+                .format(self._test_timestamp_millis),
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
     def test_gauge_reported_as_gauge(self, mock_post):
         data_point = Gauge(value=10,
                            time_unix_nano=self._test_timestamp_nanos)
         metric = self._create_record(data_point)
 
         exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = False
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}\n".format(
-                str(int(self._test_timestamp_nanos / 1000000))),
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}\n"
+                .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -401,7 +406,8 @@ class TestExporterCreation(unittest.TestCase):
 
         records = []
         records.append(self._create_record(self._create_sum_data_point(10)))
-        records.append(self._create_record(Gauge(time_unix_nano=self._test_timestamp_nanos, value=20)))
+        records.append(self._create_record(Gauge(time_unix_nano=self._test_timestamp_nanos,
+                                                 value=20)))
         records.append(self._create_record(Histogram(bucket_counts=[1, 2, 4, 5],
                                                      explicit_bounds=[0, 5, 10],
                                                      sum=36,
@@ -409,7 +415,6 @@ class TestExporterCreation(unittest.TestCase):
                                                      time_unix_nano=self._test_timestamp_nanos,
                                                      start_time_unix_nano=self._test_timestamp_nanos)))
         exporter = DynatraceMetricsExporter()
-        exporter._is_delta_export = True
         result = exporter.export(records)
 
         expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}\n" \
@@ -446,6 +451,44 @@ class TestExporterCreation(unittest.TestCase):
                                    r"delta=10 [0-9]*\n"),
             headers=self._headers)
 
+        counter.add(10, attributes={"l1": "v1", "l2": "v2"})
+
+        # shut down cleanly to avoid failed exports later.
+        meter_provider.shutdown()
+
+    @patch.object(requests.Session, 'post')
+    def test_view_histogram(self, mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        exporter = DynatraceMetricsExporter()
+
+        metric_reader = PeriodicExportingMetricReader(
+            export_interval_millis=3600000,  # 1h so that the test can finish before the collection event fires.
+            exporter=exporter)
+
+        meter_provider = MeterProvider(metric_readers=[metric_reader])
+        meter = meter_provider.get_meter(name="my.meter", version="1.0.0")
+        counter = meter.create_histogram("my.instr")
+        counter.record(10, attributes={"l1": "v1", "l2": "v2"})
+
+        metric_reader.collect()
+
+        mock_post.assert_called_once_with(
+            self._ingest_endpoint,
+            data=AnyStringMatching(r"my\.instr,(l2=v2,l1=v1|l1=v1,l2=v2),dt\.metrics\.source=opentelemetry gauge,"
+                                   r"min=10,max=10,sum=10,count=1 [0-9]*\n"),
+            headers=self._headers)
+
+        counter.record(10, attributes={"l1": "v1", "l2": "v2"})
+
+        metric_reader.collect()
+
+        mock_post.assert_called_once_with(
+            self._ingest_endpoint,
+            data=AnyStringMatching(r"my\.instr,(l2=v2,l1=v1|l1=v1,l2=v2),dt\.metrics\.source=opentelemetry gauge,"
+                                   r"min=10,max=10,sum=10,count=1 [0-9]*\n"),
+            headers=self._headers)
+
         # shut down cleanly to avoid failed exports later.
         meter_provider.shutdown()
 
@@ -459,10 +502,10 @@ class TestExporterCreation(unittest.TestCase):
                       instrumentation_info=InstrumentationInfo(name="dynatrace.opentelemetry.metrics.export",
                                                                version="0.0.1"))
 
-    def _create_sum_data_point(self, value: int) -> Sum:
+    def _create_sum_data_point(self, value: int, monotonic=True) -> Sum:
         return Sum(start_time_unix_nano=self._test_timestamp_nanos,
                    aggregation_temporality=AggregationTemporality.DELTA,
-                   is_monotonic=True,
+                   is_monotonic=monotonic,
                    time_unix_nano=self._test_timestamp_nanos,
                    value=value)
 
