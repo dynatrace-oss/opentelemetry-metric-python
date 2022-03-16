@@ -456,42 +456,6 @@ class TestExporterCreation(unittest.TestCase):
         # shut down cleanly to avoid failed exports later.
         meter_provider.shutdown()
 
-    @patch.object(requests.Session, 'post')
-    def test_view_histogram(self, mock_post):
-        mock_post.return_value = self._get_session_response()
-
-        exporter = DynatraceMetricsExporter()
-
-        metric_reader = PeriodicExportingMetricReader(
-            export_interval_millis=3600000,  # 1h so that the test can finish before the collection event fires.
-            exporter=exporter)
-
-        meter_provider = MeterProvider(metric_readers=[metric_reader])
-        meter = meter_provider.get_meter(name="my.meter", version="1.0.0")
-        counter = meter.create_histogram("my.instr")
-        counter.record(10, attributes={"l1": "v1", "l2": "v2"})
-
-        metric_reader.collect()
-
-        mock_post.assert_called_once_with(
-            self._ingest_endpoint,
-            data=AnyStringMatching(r"my\.instr,(l2=v2,l1=v1|l1=v1,l2=v2),dt\.metrics\.source=opentelemetry gauge,"
-                                   r"min=10,max=10,sum=10,count=1 [0-9]*\n"),
-            headers=self._headers)
-
-        counter.record(10, attributes={"l1": "v1", "l2": "v2"})
-
-        metric_reader.collect()
-
-        mock_post.assert_called_once_with(
-            self._ingest_endpoint,
-            data=AnyStringMatching(r"my\.instr,(l2=v2,l1=v1|l1=v1,l2=v2),dt\.metrics\.source=opentelemetry gauge,"
-                                   r"min=10,max=10,sum=10,count=1 [0-9]*\n"),
-            headers=self._headers)
-
-        # shut down cleanly to avoid failed exports later.
-        meter_provider.shutdown()
-
     def _create_record(self, point: PointT):
         return Metric(attributes=self._attributes,
                       name=self._instrument_name,
