@@ -11,8 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import platform
+
 from opentelemetry._metrics.measurement import Measurement
 from opentelemetry.sdk._metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import Resource
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 from opentelemetry import _metrics
@@ -106,17 +109,10 @@ if __name__ == '__main__':
             export_interval_millis=5000,
             exporter=DynatraceMetricsExporter(args.endpoint, args.token,
                                               prefix="otel.python",
-                                              export_dynatrace_metadata=args.metadata_enrichment))]))
+                                              export_dynatrace_metadata=args.metadata_enrichment,
+                                              default_dimensions={"default1": "defval1"}))]))
 
     meter = _metrics.get_meter(splitext(basename(__file__))[0])
-
-    exporter = DynatraceMetricsExporter(args.endpoint, args.token,
-                                        prefix="otel.python",
-                                        export_dynatrace_metadata=
-                                        args.metadata_enrichment)
-
-    logger.info("registering Dynatrace exporter with the global OpenTelemetry"
-                " instance...")
 
     logger.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
