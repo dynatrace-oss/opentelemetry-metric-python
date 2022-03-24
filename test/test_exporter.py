@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import patch
 
 import requests
-from opentelemetry.sdk._metrics import MeterProvider
+from opentelemetry.sdk._metrics import MeterProvider, View
 from opentelemetry.sdk._metrics.export import Metric, \
     MetricExportResult, PeriodicExportingMetricReader
 from opentelemetry.sdk._metrics.point import PointT, Gauge, Sum, AggregationTemporality, Histogram
@@ -438,7 +438,9 @@ class TestExporterCreation(unittest.TestCase):
             export_interval_millis=3600000,  # 1h so that the test can finish before the collection event fires.
             exporter=exporter)
 
-        meter_provider = MeterProvider(metric_readers=[metric_reader])
+        meter_provider = MeterProvider(metric_readers=[metric_reader],
+                                       views=[View(name="my.renamed.instr", instrument_name="my.instr")])
+
         meter = meter_provider.get_meter(name="my.meter", version="1.0.0")
         counter = meter.create_counter("my.instr")
         counter.add(10, attributes={"l1": "v1", "l2": "v2"})
@@ -447,8 +449,8 @@ class TestExporterCreation(unittest.TestCase):
 
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data=AnyStringMatching(r"my\.instr,(l2=v2,l1=v1|l1=v1,l2=v2),dt\.metrics\.source=opentelemetry count,"
-                                   r"delta=10 [0-9]*\n"),
+            data=AnyStringMatching(r"my\.renamed\.instr,(l2=v2,l1=v1|l1=v1,l2=v2),"
+                                   r"dt\.metrics\.source=opentelemetry count,delta=10 [0-9]*\n"),
             headers=self._headers)
 
         counter.add(10, attributes={"l1": "v1", "l2": "v2"})
