@@ -127,7 +127,7 @@ if __name__ == '__main__':
         unit="byte"
     )
 
-    vo = meter.create_observable_gauge(
+    meter.create_observable_gauge(
         callback=get_cpu_usage_callback,
         name="cpu_percent",
         description="per-cpu usage",
