@@ -153,19 +153,19 @@ class TestExporterCreation(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_with_tags(self, mock_post):
+    def test_with_attributes(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
         metric = self._create_record(self._create_sum_data_point(10))
 
-        tags = {"tag1": "tv1", "tag2": "tv2"}
-        exporter = DynatraceMetricsExporter(default_dimensions=tags)
+        attributes = {"attribute1": "tv1", "attribute2": "tv2"}
+        exporter = DynatraceMetricsExporter(default_dimensions=attributes)
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,tag1=tv1,tag2=tv2,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 "
+            data="my.instr,attribute1=tv1,attribute2=tv2,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 "
                  + str(self._test_timestamp_millis)
                  + "\n",
             headers=self._headers)
@@ -173,30 +173,30 @@ class TestExporterCreation(unittest.TestCase):
     @patch.object(requests.Session, 'post')
     @patch('dynatrace.metric.utils._dynatrace_metadata_enricher'
            '.DynatraceMetadataEnricher._get_metadata_file_content')
-    def test_dynatrace_metadata_enrichment_with_default_tags(
+    def test_dynatrace_metadata_enrichment_with_default_attributes(
             self, mock_enricher, mock_post):
         mock_post.return_value = self._get_session_response()
 
-        # tags coming from the Dynatrace metadata enricher
+        # attributes coming from the Dynatrace metadata enricher
         mock_enricher.return_value = [
-            "dt_mtag1=value1",
-            "dt_mtag2=value2"
+            "dt_mattribute1=value1",
+            "dt_mattribute2=value2"
         ]
 
-        default_tags = {"tag1": "tv1", "tag2": "tv2"}
+        default_attributes = {"attribute1": "tv1", "attribute2": "tv2"}
 
         metric = self._create_record(self._create_sum_data_point(10))
 
         exporter = DynatraceMetricsExporter(
-            default_dimensions=default_tags,
+            default_dimensions=default_attributes,
             export_dynatrace_metadata=True)
         result = exporter.export([metric])
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,tag1=tv1,tag2=tv2,l1=v1,l2=v2,"
-                 "dt_mtag1=value1,dt_mtag2=value2,"
+            data="my.instr,attribute1=tv1,attribute2=tv2,l1=v1,l2=v2,"
+                 "dt_mattribute1=value1,dt_mattribute2=value2,"
                  "dt.metrics.source=opentelemetry count,delta=10 "
                  + str(self._test_timestamp_millis)
                  + "\n",
