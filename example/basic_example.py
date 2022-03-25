@@ -11,30 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import platform
 
-from opentelemetry._metrics.measurement import Measurement
-from opentelemetry.sdk._metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
-
-from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
-from opentelemetry import _metrics
-from opentelemetry.sdk._metrics import MeterProvider
-
-from os.path import splitext, basename
 import argparse
 import logging
 import os
-import psutil
 import random
 import time
+from os.path import splitext, basename
+
+import psutil
+from opentelemetry import _metrics
+from opentelemetry._metrics.measurement import Measurement
+from opentelemetry.sdk._metrics import MeterProvider
+from opentelemetry.sdk._metrics.export import PeriodicExportingMetricReader
+
+from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 
 
 # Callback to gather cpu usage
 def get_cpu_usage_callback():
     for (number, percent) in enumerate(psutil.cpu_percent(percpu=True)):
         attributes = {"cpu_number": str(number)}
-        yield Measurement(number, attributes)
+        yield Measurement(percent, attributes)
 
 
 # Callback to gather RAM memory usage
