@@ -12,30 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
-from opentelemetry import metrics
-from opentelemetry.sdk.metrics import MeterProvider
-
-from os.path import splitext, basename
 import argparse
 import logging
 import os
-import psutil
 import random
 import time
+from os.path import splitext, basename
+
+import psutil
+from opentelemetry import _metrics
+from opentelemetry._metrics.measurement import Measurement
+from opentelemetry.sdk._metrics import MeterProvider
+from opentelemetry.sdk._metrics.export import PeriodicExportingMetricReader
+
+from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 
 
 # Callback to gather cpu usage
-def get_cpu_usage_callback(observer):
+def get_cpu_usage_callback():
     for (number, percent) in enumerate(psutil.cpu_percent(percpu=True)):
-        labels = {"cpu_number": str(number)}
-        observer.observe(percent, labels)
+        attributes = {"cpu_number": str(number)}
+        yield Measurement(percent, attributes)
 
 
 # Callback to gather RAM memory usage
-def get_ram_usage_callback(observer):
+def get_ram_usage_callback():
     ram_percent = psutil.virtual_memory().percent
-    observer.observe(ram_percent, {})
+    yield Measurement(ram_percent)
 
 
 def parse_arguments():
@@ -96,73 +99,62 @@ if __name__ == '__main__':
             "OneAgent endpoint.")
 
     # set up OpenTelemetry for export:
+    # This call sets up the MeterProvider, with a PeriodicExportingMetricReader that exports every 5000 ms
+    # and the Dynatrace exporter exporting to args.endpoint with args.token
     logger.debug("setting up global OpenTelemetry configuration.")
-    metrics.set_meter_provider(MeterProvider())
-    meter = metrics.get_meter(splitext(basename(__file__))[0])
+    _metrics.set_meter_provider(MeterProvider(
+        metric_readers=[PeriodicExportingMetricReader(
+            export_interval_millis=5000,
+            exporter=DynatraceMetricsExporter(args.endpoint, args.token,
+                                              prefix="otel.python",
+                                              export_dynatrace_metadata=args.metadata_enrichment,
+                                              default_dimensions={"default1": "defval1"}))]))
 
-    logger.info("setting up Dynatrace metrics exporting interface.")
-    exporter = DynatraceMetricsExporter(args.endpoint, args.token,
-                                        prefix="otel.python",
-                                        export_dynatrace_metadata=
-                                        args.metadata_enrichment)
-
-    logger.info("registering Dynatrace exporter with the global OpenTelemetry"
-                " instance...")
-    # This call registers the meter and exporter with the global
-    # MeterProvider set above. All instruments created by the meter that is
-    # registered here will export to the Dynatrace metrics exporter. It is a
-    # good idea to keep a reference to the meter (e. g. in a global variable)
-    # in order to create instruments anywhere in the code that all export to
-    # the same Dynatrace metrics exporter.
-    metrics.get_meter_provider().start_pipeline(meter, exporter, args.interval)
+    meter = _metrics.get_meter(splitext(basename(__file__))[0])
 
     logger.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
         name="requests",
         description="number of requests",
-        unit="1",
-        value_type=int
+        unit="1"
     )
 
-    requests_size = meter.create_valuerecorder(
+    requests_size = meter.create_histogram(
         name="request_size_bytes",
         description="size of requests",
-        unit="byte",
-        value_type=int,
+        unit="byte"
     )
 
-    vo = meter.register_valueobserver(
+    meter.create_observable_gauge(
         callback=get_cpu_usage_callback,
         name="cpu_percent",
         description="per-cpu usage",
-        unit="1",
-        value_type=float,
+        unit="1"
     )
 
-    meter.register_valueobserver(
+    meter.create_observable_gauge(
         callback=get_ram_usage_callback,
         name="ram_percent",
         description="RAM memory usage",
         unit="1",
-        value_type=float,
     )
 
-    # Labels are used to identify key-values that are associated with a
+    # Attributes are used to identify key-values that are associated with a
     # specific metric that you want to record. These are useful for
     # pre-aggregation and can be used to store custom dimensions pertaining
     # to a metric
-    staging_labels = {"environment": "staging"}
-    testing_labels = {"environment": "testing"}
+    staging_attributes = {"environment": "staging"}
+    testing_attributes = {"environment": "testing"}
 
     logger.info("starting instrumented application...")
     try:
         while True:
             # Update the metric instruments using the direct calling convention
-            requests_counter.add(random.randint(0, 25), staging_labels)
-            requests_size.record(random.randint(0, 300), staging_labels)
+            requests_counter.add(random.randint(0, 25), staging_attributes)
+            requests_size.record(random.randint(0, 300), staging_attributes)
 
-            requests_counter.add(random.randint(0, 35), testing_labels)
-            requests_size.record(random.randint(0, 100), testing_labels)
+            requests_counter.add(random.randint(0, 35), testing_attributes)
+            requests_size.record(random.randint(0, 100), testing_attributes)
             time.sleep(5)
 
     except KeyboardInterrupt:
