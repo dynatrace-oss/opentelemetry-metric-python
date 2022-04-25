@@ -183,15 +183,12 @@ class DynatraceMetricsExporter(MetricExporter):
                         int(metric.point.time_unix_nano / 1000000))
 
             if isinstance(metric.point, Histogram):
-                count = sum(metric.point.bucket_counts)
-                avg = metric.point.sum / count
-
                 return self._metric_factory.create_float_summary(
                     metric.name,
-                    avg,
-                    avg,
+                    metric.point.min,
+                    metric.point.max,
                     metric.point.sum,
-                    count,
+                    sum(metric.point.bucket_counts),
                     attrs,
                     int(metric.point.time_unix_nano / 1000000))
 

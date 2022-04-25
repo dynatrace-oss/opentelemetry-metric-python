@@ -21,7 +21,7 @@ from opentelemetry.sdk._metrics.export import Metric, \
     MetricExportResult, PeriodicExportingMetricReader
 from opentelemetry.sdk._metrics.point import PointT, Gauge, Sum, AggregationTemporality, Histogram
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.util.instrumentation import InstrumentationInfo
+from opentelemetry.sdk.util.instrumentation import InstrumentationInfo, InstrumentationScope
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 
@@ -222,7 +222,7 @@ class TestExporterCreation(unittest.TestCase):
                                 description="",
                                 unit="1",
                                 resource=Resource({}),
-                                instrumentation_info=InstrumentationInfo(
+                                instrumentation_scope=InstrumentationScope(
                                     name="dynatrace.opentelemetry.metrics.export",
                                     version="0.0.1"))
                 metrics.append(metric)
@@ -270,7 +270,7 @@ class TestExporterCreation(unittest.TestCase):
                                 description="",
                                 unit="1",
                                 resource=Resource({}),
-                                instrumentation_info=InstrumentationInfo(name="dynatrace.opentelemetry.metrics.export",
+                                instrumentation_scope=InstrumentationScope(name="dynatrace.opentelemetry.metrics.export",
                                                                          version="0.0.1"))
                 metrics.append(metric)
             else:
@@ -385,6 +385,8 @@ class TestExporterCreation(unittest.TestCase):
         data_point = Histogram(bucket_counts=[1, 2, 4, 5],
                                explicit_bounds=[0, 5, 10],
                                sum=36,
+                               min=1,
+                               max=12,
                                aggregation_temporality=AggregationTemporality.DELTA,
                                time_unix_nano=self._test_timestamp_nanos,
                                start_time_unix_nano=self._test_timestamp_nanos)
@@ -396,7 +398,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=3,max=3,sum=36,count=12 {0}\n"
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=12,sum=36,count=12 {0}\n"
                 .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
@@ -411,6 +413,8 @@ class TestExporterCreation(unittest.TestCase):
         records.append(self._create_record(Histogram(bucket_counts=[1, 2, 4, 5],
                                                      explicit_bounds=[0, 5, 10],
                                                      sum=36,
+                                                     min=1,
+                                                     max=12,
                                                      aggregation_temporality=AggregationTemporality.DELTA,
                                                      time_unix_nano=self._test_timestamp_nanos,
                                                      start_time_unix_nano=self._test_timestamp_nanos)))
@@ -419,7 +423,7 @@ class TestExporterCreation(unittest.TestCase):
 
         expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}\n" \
                    "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20 {0}\n" \
-                   "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=3,max=3,sum=36,count=12 {0}\n" \
+                   "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=12,sum=36,count=12 {0}\n" \
             .format(int(self._test_timestamp_millis))
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -465,7 +469,7 @@ class TestExporterCreation(unittest.TestCase):
                       description="",
                       unit="1",
                       resource=Resource({}),
-                      instrumentation_info=InstrumentationInfo(name="dynatrace.opentelemetry.metrics.export",
+                      instrumentation_scope=InstrumentationScope(name="dynatrace.opentelemetry.metrics.export",
                                                                version="0.0.1"))
 
     def _create_sum_data_point(self, value: int, monotonic=True) -> Sum:
