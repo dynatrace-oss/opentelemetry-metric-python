@@ -46,12 +46,14 @@ def _get_histogram_max(histogram: Histogram):
     histogram_sum = histogram.sum
     histogram_count = sum(histogram.bucket_counts)
     if len(histogram.bucket_counts) == 1:
-        # In this case, only one bucket exists: (-Inf, Inf). If there were any boundaries,
-        # there would be more counts.
+        # In this case, only one bucket exists: (-Inf, Inf). If there were
+        # any boundaries, there would be more counts.
         if histogram.bucket_counts[0] > 0:
-            # in case the single bucket contains something, use the mean as max.
+            # in case the single bucket contains something, use the mean as
+            # max.
             return histogram_sum / histogram_count
-        # otherwise the histogram has no data. Use the sum as the min and max, respectively.
+        # otherwise the histogram has no data. Use the sum as the min and
+        # max, respectively.
         return histogram_sum
 
     # loop over bucket_counts in reverse
@@ -59,17 +61,19 @@ def _get_histogram_max(histogram: Histogram):
     for index in range(last_element_index, -1, -1):
         if histogram.bucket_counts[index] > 0:
             if index == last_element_index:
-                # use the last bound in the bounds array. This can only be the case if there is a count >
-                # 0 in the last bucket (lastBound, Inf), therefore, the bound has to be smaller than the
-                # actual maximum value, which in turn ensures that the sum is larger than the bound we
-                # use as max here.
+                # use the last bound in the bounds array. This can only be
+                # the case if there is a count > 0 in the last bucket (
+                # lastBound, Inf), therefore, the bound has to be smaller
+                # than the actual maximum value, which in turn ensures that
+                # the sum is larger than the bound we use as max here.
                 return histogram.explicit_bounds[index - 1]
-            # in any bucket except the last, make sure the sum is greater than or equal to the max,
-            # otherwise report the sum.
+            # in any bucket except the last, make sure the sum is greater
+            # than or equal to the max, otherwise report the sum.
             return min(histogram.explicit_bounds[index], histogram_sum)
 
-    # there are no counts > 0, so calculating a mean would result in a division by 0. By returning
-    # the sum, we can let the backend decide what to do with the value (with a count of 0)
+    # there are no counts > 0, so calculating a mean would result in a
+    # division by 0. By returning the sum, we can let the backend decide what
+    # to do with the value (with a count of 0)
     return histogram_sum
 
 
@@ -80,36 +84,39 @@ def _get_histogram_min(histogram: Histogram):
     histogram_sum = histogram.sum
     histogram_count = sum(histogram.bucket_counts)
     if len(histogram.bucket_counts) == 1:
-        # In this case, only one bucket exists: (-Inf, Inf). If there were any boundaries,
-        # there would be more counts.
+        # In this case, only one bucket exists: (-Inf, Inf). If there were
+        # any boundaries, there would be more counts.
         if histogram.bucket_counts[0] > 0:
-            # in case the single bucket contains something, use the mean as min.
+            # in case the single bucket contains something, use the mean as
+            # min.
             return histogram_sum / histogram_count
-        # otherwise the histogram has no data. Use the sum as the min and max, respectively.
+        # otherwise the histogram has no data. Use the sum as the min and
+        # max, respectively.
         return histogram_sum
 
     for index in range(0, len(histogram.bucket_counts)):
         if histogram.bucket_counts[index] > 0:
             if index == 0:
-                # If we are in the first bucket, use the upper bound (which is the lowest specified bound
-                # overall) otherwise this would be -Inf, which is not allowed. This is not quite correct,
-                # but the best approximation we can get at this point. This might however lead to a min
-                # that is bigger than the sum, therefore we return the min of the sum and the lowest
-                # bound.
-                # Choose the minimum of the following three:
-                # - The lowest boundary
-                # - The sum (smallest if there are multiple negative measurements smaller than the lowest
-                # boundary)
-                # - The average in the bucket (smallest if there are multiple positive measurements
-                # smaller than the lowest boundary)
+                # If we are in the first bucket, use the upper bound (which
+                # is the lowest specified bound overall) otherwise this would
+                # be -Inf, which is not allowed. This is not quite correct,
+                # but the best approximation we can get at this point. This
+                # might however lead to a min that is bigger than the sum,
+                # therefore we return the min of the sum and the lowest
+                # bound. Choose the minimum of the following three: - The
+                # lowest boundary - The sum (smallest if there are multiple
+                # negative measurements smaller than the lowest boundary) -
+                # The average in the bucket (smallest if there are multiple
+                # positive measurements smaller than the lowest boundary)
                 return min(
                     min(histogram.explicit_bounds[index], histogram_sum),
                     histogram_sum / histogram_count
                 )
             return histogram.explicit_bounds[index - 1]
 
-    # there are no counts > 0, so calculating a mean would result in a division by 0. By returning
-    # the sum, we can let the backend decide what to do with the value (with a count of 0)
+    # there are no counts > 0, so calculating a mean would result in a
+    # division by 0. By returning the sum, we can let the backend decide what
+    # to do with the value (with a count of 0)
     return histogram_sum
 
 
