@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import math
 import re
 import unittest
 from unittest.mock import patch
@@ -21,7 +22,7 @@ from opentelemetry.sdk._metrics.export import Metric, \
     MetricExportResult, PeriodicExportingMetricReader
 from opentelemetry.sdk._metrics.point import PointT, Gauge, Sum, AggregationTemporality, Histogram
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.util.instrumentation import InstrumentationInfo, InstrumentationScope
+from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 
@@ -270,8 +271,9 @@ class TestExporterCreation(unittest.TestCase):
                                 description="",
                                 unit="1",
                                 resource=Resource({}),
-                                instrumentation_scope=InstrumentationScope(name="dynatrace.opentelemetry.metrics.export",
-                                                                         version="0.0.1"))
+                                instrumentation_scope=InstrumentationScope(
+                                    name="dynatrace.opentelemetry.metrics.export",
+                                    version="0.0.1"))
                 metrics.append(metric)
             else:
                 metrics.append(self._create_record(data_point))
@@ -403,6 +405,28 @@ class TestExporterCreation(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
+    def test_histogram_without_min_max_reported_as_estimated_gauge(self, mock_post):
+        data_point = Histogram(bucket_counts=[0, 1, 0, 3, 0, 4],
+                               explicit_bounds=[1, 2, 3, 4, 5],
+                               sum=10.234,
+                               min=math.inf,
+                               max=-math.inf,
+                               aggregation_temporality=AggregationTemporality.DELTA,
+                               time_unix_nano=self._test_timestamp_nanos,
+                               start_time_unix_nano=self._test_timestamp_nanos)
+        metric = self._create_record(data_point)
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export([metric])
+
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            self._ingest_endpoint,
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=5,sum=10.234,count=8 {0}\n"
+                .format(str(int(self._test_timestamp_nanos / 1000000))),
+            headers=self._headers)
+
+    @patch.object(requests.Session, 'post')
     def test_multiple_records(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
@@ -470,7 +494,7 @@ class TestExporterCreation(unittest.TestCase):
                       unit="1",
                       resource=Resource({}),
                       instrumentation_scope=InstrumentationScope(name="dynatrace.opentelemetry.metrics.export",
-                                                               version="0.0.1"))
+                                                                 version="0.0.1"))
 
     def _create_sum_data_point(self, value: int, monotonic=True) -> Sum:
         return Sum(start_time_unix_nano=self._test_timestamp_nanos,

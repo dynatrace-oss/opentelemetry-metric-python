@@ -43,7 +43,7 @@ def _get_histogram_max(histogram: Histogram):
     if math.isfinite(histogram.max):
         return histogram.max
 
-    histogram_sum = sum(histogram.bucket_counts)
+    histogram_sum = histogram.sum
     histogram_count = sum(histogram.bucket_counts)
     if len(histogram.bucket_counts) == 1:
         # In this case, only one bucket exists: (-Inf, Inf). If there were any boundaries,
@@ -63,10 +63,10 @@ def _get_histogram_max(histogram: Histogram):
                 # 0 in the last bucket (lastBound, Inf), therefore, the bound has to be smaller than the
                 # actual maximum value, which in turn ensures that the sum is larger than the bound we
                 # use as max here.
-                return histogram.explicit_bounds[index -1]
+                return histogram.explicit_bounds[index - 1]
             # in any bucket except the last, make sure the sum is greater than or equal to the max,
             # otherwise report the sum.
-            return min(histogram.explicit_bounds[0], histogram_sum)
+            return min(histogram.explicit_bounds[index], histogram_sum)
 
     # there are no counts > 0, so calculating a mean would result in a division by 0. By returning
     # the sum, we can let the backend decide what to do with the value (with a count of 0)
@@ -77,7 +77,7 @@ def _get_histogram_min(histogram: Histogram):
     if math.isfinite(histogram.min):
         return histogram.min
 
-    histogram_sum = sum(histogram.bucket_counts)
+    histogram_sum = histogram.sum
     histogram_count = sum(histogram.bucket_counts)
     if len(histogram.bucket_counts) == 1:
         # In this case, only one bucket exists: (-Inf, Inf). If there were any boundaries,
@@ -106,7 +106,7 @@ def _get_histogram_min(histogram: Histogram):
                     min(histogram.explicit_bounds[index], histogram_sum),
                     histogram_sum / histogram_count
                 )
-            return histogram.bucket_counts[index - 1]
+            return histogram.explicit_bounds[index - 1]
 
     # there are no counts > 0, so calculating a mean would result in a division by 0. By returning
     # the sum, we can let the backend decide what to do with the value (with a count of 0)
