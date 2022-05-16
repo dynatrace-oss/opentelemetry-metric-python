@@ -40,7 +40,7 @@ VERSION = "0.2.0b0"
 
 
 def _get_histogram_max(histogram: Histogram):
-    if math.isfinite(histogram.max):
+    if histogram.max is not None and math.isfinite(histogram.max):
         return histogram.max
 
     histogram_sum = histogram.sum
@@ -78,7 +78,7 @@ def _get_histogram_max(histogram: Histogram):
 
 
 def _get_histogram_min(histogram: Histogram):
-    if math.isfinite(histogram.min):
+    if histogram.min is not None and math.isfinite(histogram.min):
         return histogram.min
 
     histogram_sum = histogram.sum

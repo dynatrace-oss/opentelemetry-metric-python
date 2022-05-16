@@ -20,7 +20,8 @@ import requests
 from opentelemetry.sdk._metrics import MeterProvider, View
 from opentelemetry.sdk._metrics.export import Metric, \
     MetricExportResult, PeriodicExportingMetricReader
-from opentelemetry.sdk._metrics.point import PointT, Gauge, Sum, AggregationTemporality, Histogram
+from opentelemetry.sdk._metrics.point import PointT, Gauge, Sum, \
+    AggregationTemporality, Histogram
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 
