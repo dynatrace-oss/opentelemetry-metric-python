@@ -387,8 +387,8 @@ class TestExporterCreation(unittest.TestCase):
     def test_histogram_reported_as_gauge(self, mock_post):
         data_point = Histogram(bucket_counts=[1, 2, 4, 5],
                                explicit_bounds=[0, 5, 10],
-                               sum=36,
-                               min=1,
+                               sum=87,
+                               min=-3,
                                max=12,
                                aggregation_temporality=AggregationTemporality.DELTA,
                                time_unix_nano=self._test_timestamp_nanos,
@@ -401,15 +401,15 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=12,sum=36,count=12 {0}\n"
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=-3,max=12,sum=87,count=12 {0}\n"
                 .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
     def test_histogram_without_min_max_reported_as_estimated_gauge(self, mock_post):
-        data_point = Histogram(bucket_counts=[0, 1, 0, 3, 0, 4],
-                               explicit_bounds=[1, 2, 3, 4, 5],
-                               sum=10.234,
+        data_point = Histogram(bucket_counts=[1, 2, 4, 5],
+                               explicit_bounds=[0, 5, 10],
+                               sum=87,
                                min=math.inf,
                                max=-math.inf,
                                aggregation_temporality=AggregationTemporality.DELTA,
@@ -423,7 +423,7 @@ class TestExporterCreation(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=5,sum=10.234,count=8 {0}\n"
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=0,max=10,sum=87,count=12 {0}\n"
                 .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
@@ -437,8 +437,8 @@ class TestExporterCreation(unittest.TestCase):
                                                  value=20)))
         records.append(self._create_record(Histogram(bucket_counts=[1, 2, 4, 5],
                                                      explicit_bounds=[0, 5, 10],
-                                                     sum=36,
-                                                     min=1,
+                                                     sum=87,
+                                                     min=-3,
                                                      max=12,
                                                      aggregation_temporality=AggregationTemporality.DELTA,
                                                      time_unix_nano=self._test_timestamp_nanos,
@@ -448,7 +448,7 @@ class TestExporterCreation(unittest.TestCase):
 
         expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}\n" \
                    "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20 {0}\n" \
-                   "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=1,max=12,sum=36,count=12 {0}\n" \
+                   "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=-3,max=12,sum=87,count=12 {0}\n" \
             .format(int(self._test_timestamp_millis))
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
