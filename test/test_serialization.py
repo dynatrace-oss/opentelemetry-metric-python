@@ -58,7 +58,7 @@ class TestMax(unittest.TestCase):
     def test_get_max(self):
         #  A value between the last two boundaries.
         self.assertEqual(5,
-                         _get_histogram_max(create_histogram([1, 2, 3, 4, 5], [0, 1, 0, 3, 0, 4], 10.234)))
+                         _get_histogram_max(create_histogram([1, 2, 3, 4, 5], [0, 1, 0, 3, 2, 0], 10.234)))
         # last bucket has value, use the last boundary as estimation instead of Inf
         self.assertEqual(5,
                          _get_histogram_max(create_histogram([1, 2, 3, 4, 5], [1, 0, 0, 3, 0, 4], 10.234)))
