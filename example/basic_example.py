@@ -21,24 +21,26 @@ from os.path import splitext, basename
 
 import psutil
 from opentelemetry import _metrics
-from opentelemetry._metrics.measurement import Measurement
 from opentelemetry.sdk._metrics import MeterProvider
 from opentelemetry.sdk._metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk._metrics.measurement import Measurement
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 
+cpu_gauge = None
+ram_gauge = None
 
 # Callback to gather cpu usage
 def get_cpu_usage_callback():
     for (number, percent) in enumerate(psutil.cpu_percent(percpu=True)):
         attributes = {"cpu_number": str(number)}
-        yield Measurement(percent, attributes)
+        yield Measurement(percent, cpu_gauge, attributes)
 
 
 # Callback to gather RAM memory usage
 def get_ram_usage_callback():
     ram_percent = psutil.virtual_memory().percent
-    yield Measurement(ram_percent)
+    yield Measurement(ram_percent, ram_gauge)
 
 
 def parse_arguments():
@@ -110,7 +112,7 @@ if __name__ == '__main__':
                                               export_dynatrace_metadata=args.metadata_enrichment,
                                               default_dimensions={"default1": "defval1"}))]))
 
-    meter = _metrics.get_meter(splitext(basename(__file__))[0])
+    meter = _metrics.get_meter(script_name)
 
     logger.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
@@ -125,15 +127,15 @@ if __name__ == '__main__':
         unit="byte"
     )
 
-    meter.create_observable_gauge(
-        callback=get_cpu_usage_callback,
+    cpu_gauge = meter.create_observable_gauge(
+        callbacks=[get_cpu_usage_callback],
         name="cpu_percent",
         description="per-cpu usage",
         unit="1"
     )
 
-    meter.create_observable_gauge(
-        callback=get_ram_usage_callback,
+    ram_gauge = meter.create_observable_gauge(
+        callbacks=[get_ram_usage_callback],
         name="ram_percent",
         description="RAM memory usage",
         unit="1",
