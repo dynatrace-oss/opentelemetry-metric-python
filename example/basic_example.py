@@ -112,7 +112,7 @@ if __name__ == '__main__':
                                               export_dynatrace_metadata=args.metadata_enrichment,
                                               default_dimensions={"default1": "defval1"}))]))
 
-    meter = _metrics.get_meter(splitext(basename(__file__))[0])
+    meter = _metrics.get_meter(script_name)
 
     logger.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
