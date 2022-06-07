@@ -1,2 +1,3 @@
 tox
 pytest~=6.2.5
+parameterized~=0.8.1

@@ -61,15 +61,15 @@ def _get_histogram_max(histogram: Histogram):
     for index in range(last_element_index, -1, -1):
         if histogram.bucket_counts[index] > 0:
             if index == last_element_index:
-                # use the last bound in the bounds array. This can only be
-                # the case if there is a count > 0 in the last bucket (
-                # lastBound, Inf), therefore, the bound has to be smaller
-                # than the actual maximum value, which in turn ensures that
-                # the sum is larger than the bound we use as max here.
-                return histogram.explicit_bounds[index - 1]
-            # in any bucket except the last, make sure the sum is greater
-            # than or equal to the max, otherwise report the sum.
-            return min(histogram.explicit_bounds[index], histogram_sum)
+                # use the last bound in the bounds array. This can only be the
+                # case if there is a count >  0 in the last bucket (lastBound,
+                # Inf). In some cases, the mean of the histogram is larger than
+                # this bound, thus use the maximum of the estimated bound and
+                # the mean.
+                return max(histogram.explicit_bounds[index - 1],
+                           histogram_sum / histogram_count)
+            # In any other bucket (lowerBound, upperBound], use the upperBound.
+            return histogram.explicit_bounds[index]
 
     # there are no counts > 0, so calculating a mean would result in a
     # division by 0. By returning the sum, we can let the backend decide what
@@ -94,24 +94,22 @@ def _get_histogram_min(histogram: Histogram):
         # max, respectively.
         return histogram_sum
 
+    # iterate all buckets to find the first bucket with count > 0
     for index in range(0, len(histogram.bucket_counts)):
+        # the current bucket contains something.
         if histogram.bucket_counts[index] > 0:
             if index == 0:
-                # If we are in the first bucket, use the upper bound (which
-                # is the lowest specified bound overall) otherwise this would
-                # be -Inf, which is not allowed. This is not quite correct,
-                # but the best approximation we can get at this point. This
-                # might however lead to a min that is bigger than the sum,
-                # therefore we return the min of the sum and the lowest
-                # bound. Choose the minimum of the following three: - The
-                # lowest boundary - The sum (smallest if there are multiple
-                # negative measurements smaller than the lowest boundary) -
-                # The average in the bucket (smallest if there are multiple
-                # positive measurements smaller than the lowest boundary)
-                return min(
-                    min(histogram.explicit_bounds[index], histogram_sum),
-                    histogram_sum / histogram_count
-                )
+                # In the first bucket, (-Inf, firstBound], use firstBound (
+                # this is the lowest specified bound overall). This is not
+                # quite correct but the best approximation we can get at
+                # this point. However, this might lead to a min bigger than
+                # the mean, thus choose the minimum of the following: - The
+                # lowest boundary - The average of the histogram (histogram
+                # sum / sum of counts)
+                return min(histogram.explicit_bounds[index],
+                           histogram_sum / histogram_count)
+            # In all other buckets (lowerBound, upperBound] use the
+            # lowerBound to estimate min.
             return histogram.explicit_bounds[index - 1]
 
     # there are no counts > 0, so calculating a mean would result in a
