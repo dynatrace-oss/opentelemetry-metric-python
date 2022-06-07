@@ -99,8 +99,8 @@ def _get_histogram_min(histogram: Histogram):
         # the current bucket contains something.
         if histogram.bucket_counts[index] > 0:
             if index == 0:
-                # In the first bucket, (-Inf, firstBound], use firstBound (
-                # this is the lowest specified bound overall). This is not
+                # In the first bucket, (-Inf, firstBound], use firstBound 
+                # (this is the lowest specified bound overall). This is not
                 # quite correct but the best approximation we can get at
                 # this point. However, this might lead to a min bigger than
                 # the mean, thus choose the minimum of the following:
