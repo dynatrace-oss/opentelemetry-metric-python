@@ -103,9 +103,9 @@ def _get_histogram_min(histogram: Histogram):
                 # this is the lowest specified bound overall). This is not
                 # quite correct but the best approximation we can get at
                 # this point. However, this might lead to a min bigger than
-                # the mean, thus choose the minimum of the following: - The
-                # lowest boundary - The average of the histogram (histogram
-                # sum / sum of counts)
+                # the mean, thus choose the minimum of the following:
+                # - The lowest boundary
+                # - The histogram's average (histogram sum / sum of counts)
                 return min(histogram.explicit_bounds[index],
                            histogram_sum / histogram_count)
             # In all other buckets (lowerBound, upperBound] use the
