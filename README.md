@@ -118,3 +118,13 @@ Just [`tox`](https://pypi.org/project/tox/).
 * A particular python version: `tox -e 38`
 * Current python version: `tox -e py`
 * Lint: `tox -e lint`
+
+## Limitations
+
+### Histogram
+
+OpenTelemetry Histograms are exported to Dynatrace as statistical summaries
+consisting of a minimum and maximum value, the total sum of all values, and the
+count of the values summarized. If the min and max values are not directly
+available on the metric data point, estimations based on the boundaries of the
+first and last buckets containing values are used.
