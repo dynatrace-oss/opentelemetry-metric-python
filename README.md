@@ -79,9 +79,7 @@ If no endpoint is set and a OneAgent is running on the host, metrics will be exp
 The Dynatrace API token to be used by the exporter is specified using the `api_token` parameter and could, for example, be read from an environment variable.
 
 Creating an API token for your Dynatrace environment is described in the [Dynatrace API documentation](https://www.dynatrace.com/support/help/dynatrace-api/basics/dynatrace-api-authentication/).
-The scope required for sending metrics is the `Ingest metrics` scope in the **API v2** section:
-
-![API token creation](https://raw.githubusercontent.com/dynatrace-oss/opentelemetry-metric-python/main/docs/img/api_token.png)
+The permission required for sending metrics is `Ingest metrics` (`metrics.ingest`) and it is recommended to limit scope to only this permission.
 
 #### Metric Key Prefix
 
