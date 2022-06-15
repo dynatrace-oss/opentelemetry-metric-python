@@ -36,7 +36,7 @@ from opentelemetry.sdk._metrics.point import (
     Gauge,
     Histogram)
 
-VERSION = "0.2.0b0"
+VERSION = "0.3.0b0"
 
 
 def _get_histogram_max(histogram: Histogram):
