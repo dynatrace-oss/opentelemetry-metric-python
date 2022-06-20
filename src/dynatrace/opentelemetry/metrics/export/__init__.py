@@ -14,14 +14,22 @@
 
 import logging
 import math
+from enum import Enum
 
 import requests
-from typing import Mapping, Optional, Sequence
+from typing import Mapping, Optional
 
-from opentelemetry.sdk._metrics.export import (
+from opentelemetry.sdk.metrics._internal.point import NumberDataPoint, Metric, \
+    HistogramDataPoint
+from opentelemetry.sdk.metrics.export import (
     MetricExporter,
-    Metric,
     MetricExportResult,
+    Sum,
+    AggregationTemporality,
+    Gauge,
+    Histogram,
+    MetricsData,
+    DataPointT
 )
 
 from dynatrace.metric.utils import (
@@ -30,16 +38,11 @@ from dynatrace.metric.utils import (
     DynatraceMetricsFactory,
     MetricError
 )
-from opentelemetry.sdk._metrics.point import (
-    Sum,
-    AggregationTemporality,
-    Gauge,
-    Histogram)
 
 VERSION = "0.2.0b0"
 
 
-def _get_histogram_max(histogram: Histogram):
+def _get_histogram_max(histogram: HistogramDataPoint):
     if histogram.max is not None and math.isfinite(histogram.max):
         return histogram.max
 
@@ -77,7 +80,7 @@ def _get_histogram_max(histogram: Histogram):
     return histogram_sum
 
 
-def _get_histogram_min(histogram: Histogram):
+def _get_histogram_min(histogram: HistogramDataPoint):
     if histogram.min is not None and math.isfinite(histogram.min):
         return histogram.min
 
@@ -127,6 +130,10 @@ class DynatraceMetricsExporter(MetricExporter):
     export(metric_records: Sequence[MetricRecord])
     """
 
+    def shutdown(self, timeout_millis: float = 30_000, **kwargs) -> None:
+        # nothing to do.
+        pass
+
     def __init__(
             self,
             endpoint_url: Optional[str] = None,
@@ -170,117 +177,135 @@ class DynatraceMetricsExporter(MetricExporter):
     def preferred_temporality(self) -> AggregationTemporality:
         return AggregationTemporality.DELTA
 
-    def export(
-            self, metric_records: Sequence[Metric]
-    ) -> MetricExportResult:
+    def export(self,
+               metrics_data: MetricsData,
+               timeout_millis: float = 10_000,
+               **kwargs) -> MetricExportResult:
         """
-        Export a batch of metric records to Dynatrace
+                Export Metrics to Dynatrace
 
-        Parameters
-        ----------
-        metric_records : Sequence[Metric], required
-            A sequence of metrics to be exported
+                Parameters
+                ----------
+                timeout_millis
+                metrics_data : MetricsData, required
+                    The Metrics to be exported
 
-        Raises
-        ------
-        HTTPError
-            If one occurred
+                Raises
+                ------
+                HTTPError
+                    If one occurred
 
-        Returns
-        -------
-        MetricExportResult
-            Indicates SUCCESS or FAILURE
-        """
-        if not metric_records:
+                Returns
+                -------
+                MetricExportResult
+                    Indicates SUCCESS or FAILURE
+                """
+        if len(metrics_data.resource_metrics) == 0:
             return MetricExportResult.SUCCESS
 
         # split all metrics into batches of
         # DynatraceMetricApiConstants.PayloadLinesLimit lines
         chunk_size = DynatraceMetricsApiConstants.payload_lines_limit()
-        chunks = [metric_records[i:i + chunk_size] for i in
-                  range(0, len(metric_records), chunk_size)]
 
-        for chunk in chunks:
-            string_buffer = []
-            for metric in chunk:
-                dt_metric = self._to_dynatrace_metric(metric)
-                if dt_metric is None:
-                    continue
-                try:
-                    string_buffer.append(self._serializer.serialize(dt_metric))
-                    string_buffer.append("\n")
-                except MetricError as ex:
-                    self.__logger.warning(
-                        "Failed to serialize metric. Skipping: %s", ex)
+        string_buffer = []
+        for resource_metric in metrics_data.resource_metrics:
+            for scope_metric in resource_metric.scope_metrics:
+                for metric in scope_metric.metrics:
+                    for data_point in metric.data.data_points:
+                        dt_metric = self._to_dynatrace_metric(metric,
+                                                              data_point)
+                        if dt_metric is None:
+                            continue
+                        try:
+                            string_buffer.append(
+                                self._serializer.serialize(dt_metric))
+                            string_buffer.append("\n")
+                        except MetricError as ex:
+                            self.__logger.warning(
+                                "Failed to serialize metric. Skipping: %s", ex)
 
-            serialized_records = "".join(string_buffer)
-            self.__logger.debug("sending lines:\n" + serialized_records)
-
-            if not serialized_records:
-                return MetricExportResult.SUCCESS
-
-            try:
-                with self._session.post(self._endpoint_url,
-                                        data=serialized_records,
-                                        headers=self._headers) as resp:
-                    resp.raise_for_status()
-                    self.__logger.debug("got response: {}".format(
-                        resp.content.decode("utf-8")))
-            except Exception as ex:
-                self.__logger.warning("Failed to export metrics: %s", ex)
-                return MetricExportResult.FAILURE
-
+                        if len(string_buffer) / 2 >= chunk_size:
+                            try:
+                                self._send_lines(string_buffer)
+                                string_buffer = []
+                            except Exception as ex:
+                                self.__logger.warning(
+                                    "Failed to export metrics: %s", ex)
+                                return MetricExportResult.FAILURE
+        try:
+            self._send_lines(string_buffer)
+        except Exception as ex:
+            self.__logger.warning(
+                "Failed to export metrics: %s", ex)
+            return MetricExportResult.FAILURE
         return MetricExportResult.SUCCESS
 
-    def _to_dynatrace_metric(self, metric: Metric):
+    def _send_lines(self, string_buffer):
+        serialized_records = "".join(string_buffer)
+        self.__logger.debug(
+            "sending lines:\n" + serialized_records)
+        with self._session.post(self._endpoint_url,
+                                data=serialized_records,
+                                headers=self._headers) as resp:
+            resp.raise_for_status()
+            self.__logger.debug(
+                "got response: {}".format(
+                    resp.content.decode("utf-8")))
+
+    def _sum_to_dynatrace_metric(self, metric: Metric, point: NumberDataPoint):
+        if isinstance(point.value, float):
+            return self._metric_factory.create_float_counter_delta(
+                metric.name,
+                point.value,
+                dict(point.attributes),
+                int(point.time_unix_nano / 1000000))
+        if isinstance(point.value, int):
+            return self._metric_factory.create_int_counter_delta(
+                metric.name,
+                point.value,
+                dict(point.attributes),
+                int(point.time_unix_nano / 1000000))
+
+    def _gauge_to_dynatrace_metric(self, metric: Metric,
+                                   point: NumberDataPoint):
+        if isinstance(point.value, float):
+            return self._metric_factory.create_float_gauge(
+                metric.name,
+                point.value,
+                dict(point.attributes),
+                int(point.time_unix_nano / 1000000))
+        if isinstance(point.value, int):
+            return self._metric_factory.create_int_gauge(
+                metric.name,
+                point.value,
+                dict(point.attributes),
+                int(point.time_unix_nano / 1000000))
+
+    def _histogram_to_dynatrace_metric(self, metric: Metric,
+                                       point: HistogramDataPoint):
+        return self._metric_factory.create_float_summary(
+            metric.name,
+            _get_histogram_min(point),
+            _get_histogram_max(point),
+            point.sum,
+            sum(point.bucket_counts),
+            dict(point.attributes),
+            int(point.time_unix_nano / 1000000))
+
+    def _to_dynatrace_metric(self, metric: Metric, point: DataPointT):
         try:
-            attrs = dict(metric.attributes)
-            if isinstance(metric.point, Sum):
-                if isinstance(metric.point.value, float):
-                    return self._metric_factory.create_float_counter_delta(
-                        metric.name,
-                        metric.point.value,
-                        attrs,
-                        int(metric.point.time_unix_nano / 1000000))
-                if isinstance(metric.point.value, int):
-                    return self._metric_factory.create_int_counter_delta(
-                        metric.name,
-                        metric.point.value,
-                        attrs,
-                        int(metric.point.time_unix_nano / 1000000))
-
-            if isinstance(metric.point, Gauge):
-                if isinstance(metric.point.value, float):
-                    return self._metric_factory.create_float_gauge(
-                        metric.name,
-                        metric.point.value,
-                        attrs,
-                        int(metric.point.time_unix_nano / 1000000))
-                if isinstance(metric.point.value, int):
-                    return self._metric_factory.create_int_gauge(
-                        metric.name,
-                        metric.point.value,
-                        attrs,
-                        int(metric.point.time_unix_nano / 1000000))
-
-            if isinstance(metric.point, Histogram):
-                return self._metric_factory.create_float_summary(
-                    metric.name,
-                    _get_histogram_min(metric.point),
-                    _get_histogram_max(metric.point),
-                    metric.point.sum,
-                    sum(metric.point.bucket_counts),
-                    attrs,
-                    int(metric.point.time_unix_nano / 1000000))
+            if isinstance(metric.data, Sum):
+                return self._sum_to_dynatrace_metric(metric, point)
+            if isinstance(metric.data, Histogram):
+                return self._histogram_to_dynatrace_metric(metric, point)
+            if isinstance(metric.data, Gauge):
+                return self._gauge_to_dynatrace_metric(metric, point)
 
             self.__logger.warning("Failed to create a Dynatrace metric, "
                                   "unsupported metric point type: %s",
-                                  type(metric.point).__name__)
+                                  type(metric.data).__name__)
 
         except MetricError as ex:
             self.__logger.warning("Failed to create the Dynatrace metric: %s",
                                   ex)
             return None
-
-    def shutdown(self) -> None:
-        return
