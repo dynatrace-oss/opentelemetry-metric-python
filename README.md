@@ -16,20 +16,20 @@ pip install opentelemetry-exporter-dynatrace-metrics
 
 ### Usage
 
-The general setup of OpenTelemetry Python is explained in the official [Getting Started Guide](https://opentelemetry-python.readthedocs.io/en/stable/getting-started.html).
+The general setup of OpenTelemetry Python is explained in the official [Getting Started Guide](https://open-telemetry.github.io/opentelemetry-python/getting-started.html#add-metrics).
 
 ```python
 # configure API endpoint and authentication token
 exporter = DynatraceMetricsExporter(endpoint_url, api_token)
 
 # setup metrics export pipeline
-_metrics.set_meter_provider(MeterProvider(
+metrics.set_meter_provider(MeterProvider(
         metric_readers=[PeriodicExportingMetricReader(
             export_interval_millis=5000,
             exporter=exporter)]))
 
 # get a meter
-meter = _metrics.get_meter(__name__)
+meter = metrics.get_meter(__name__)
 
 # create a counter instrument and provide the first data point
 counter = meter.create_counter(
@@ -100,8 +100,8 @@ More information on the underlying Dynatrace metadata feature that is used by th
 
 ##### Dimensions precedence
 
-When specifying default dimensions, labels and Dynatrace metadata enrichment, the precedence of dimensions with the same key is as follows:
-Default dimensions are overwritten by labels passed to instruments, which in turn are overwritten by the Dynatrace metadata dimensions (even though the likeliness of a collision here is very low, since the Dynatrace metadata only contains [Dynatrace reserved dimensions](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol/#syntax) starting with `dt.*`).
+When specifying default dimensions, attributes and Dynatrace metadata enrichment, the precedence of dimensions with the same key is as follows:
+Default dimensions are overwritten by attributes passed to instruments, which in turn are overwritten by the Dynatrace metadata dimensions (even though the likeliness of a collision here is very low, since the Dynatrace metadata only contains [Dynatrace reserved dimensions](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol/#syntax) starting with `dt.*`).
 
 ## Development
 

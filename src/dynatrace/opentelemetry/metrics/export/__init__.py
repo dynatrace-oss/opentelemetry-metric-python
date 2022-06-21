@@ -126,7 +126,7 @@ class DynatraceMetricsExporter(MetricExporter):
 
     Methods
     -------
-    export(metric_records: Sequence[MetricRecord])
+    export(metric_records: MetricsData)
     """
 
     def shutdown(self, timeout_millis: float = 30_000, **kwargs) -> None:
