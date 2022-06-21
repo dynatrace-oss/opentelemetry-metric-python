@@ -14,12 +14,17 @@
 
 import logging
 import math
-from enum import Enum
-
 import requests
 from typing import Mapping, Optional
 
-from opentelemetry.sdk.metrics._internal.point import NumberDataPoint, Metric, \
+from dynatrace.metric.utils import (
+    DynatraceMetricsSerializer,
+    DynatraceMetricsApiConstants,
+    DynatraceMetricsFactory,
+    MetricError
+)
+from opentelemetry.sdk.metrics._internal.point import NumberDataPoint, \
+    Metric, \
     HistogramDataPoint
 from opentelemetry.sdk.metrics.export import (
     MetricExporter,
@@ -32,13 +37,6 @@ from opentelemetry.sdk.metrics.export import (
     DataPointT
 )
 
-from dynatrace.metric.utils import (
-    DynatraceMetricsSerializer,
-    DynatraceMetricsApiConstants,
-    DynatraceMetricsFactory,
-    MetricError
-)
-
 VERSION = "0.3.0b0"
 
 
@@ -47,7 +45,7 @@ def _get_histogram_max(histogram: HistogramDataPoint):
         return histogram.max
 
     histogram_sum = histogram.sum
-    histogram_count = sum(histogram.bucket_counts)
+    histogram_count = histogram.count
     if len(histogram.bucket_counts) == 1:
         # In this case, only one bucket exists: (-Inf, Inf). If there were
         # any boundaries, there would be more counts.
@@ -85,7 +83,7 @@ def _get_histogram_min(histogram: HistogramDataPoint):
         return histogram.min
 
     histogram_sum = histogram.sum
-    histogram_count = sum(histogram.bucket_counts)
+    histogram_count = histogram.count
     if len(histogram.bucket_counts) == 1:
         # In this case, only one bucket exists: (-Inf, Inf). If there were
         # any boundaries, there would be more counts.

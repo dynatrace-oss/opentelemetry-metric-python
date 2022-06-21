@@ -36,7 +36,7 @@ class AnyStringMatching(str):
         return re.match(str(self), other)
 
 
-class TestExporterCreation(unittest.TestCase):
+class TestExporter(unittest.TestCase):
 
     def setUp(self) -> None:
         self._instrument_name = "my.instr"
@@ -464,10 +464,10 @@ class TestExporterCreation(unittest.TestCase):
 
         meter_provider = MeterProvider(metric_readers=[metric_reader],
                                        views=[View(name="my.renamed.instr",
-                                                   instrument_name="my.instr")])
+                                                   instrument_name=self._instrument_name)])
 
         meter = meter_provider.get_meter(name="my.meter", version="1.0.0")
-        counter = meter.create_counter("my.instr")
+        counter = meter.create_counter(self._instrument_name)
         counter.add(10, attributes={"l1": "v1", "l2": "v2"})
 
         metric_reader.collect()
