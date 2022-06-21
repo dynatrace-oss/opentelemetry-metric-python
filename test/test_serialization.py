@@ -6,8 +6,10 @@ from typing import List, Union
 from parameterized import parameterized
 from opentelemetry.sdk.metrics.export import HistogramDataPoint
 
-from dynatrace.opentelemetry.metrics.export import _get_histogram_min, \
+from dynatrace.opentelemetry.metrics.export import (
+    _get_histogram_min,
     _get_histogram_max
+)
 
 
 def create_histogram(explicit_bounds: List[int], bucket_counts: List[int],

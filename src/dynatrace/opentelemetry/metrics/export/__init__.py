@@ -23,9 +23,7 @@ from dynatrace.metric.utils import (
     DynatraceMetricsFactory,
     MetricError
 )
-from opentelemetry.sdk.metrics._internal.point import NumberDataPoint, \
-    Metric, \
-    HistogramDataPoint
+
 from opentelemetry.sdk.metrics.export import (
     MetricExporter,
     MetricExportResult,
@@ -34,7 +32,10 @@ from opentelemetry.sdk.metrics.export import (
     Gauge,
     Histogram,
     MetricsData,
-    DataPointT
+    DataPointT,
+    NumberDataPoint,
+    Metric,
+    HistogramDataPoint
 )
 
 VERSION = "0.3.0b0"

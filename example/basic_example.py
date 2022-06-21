@@ -20,27 +20,29 @@ import time
 from os.path import splitext, basename
 
 import psutil
-from opentelemetry import _metrics
-from opentelemetry.sdk._metrics import MeterProvider
-from opentelemetry.sdk._metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk._metrics.measurement import Measurement
+import opentelemetry.metrics as metrics
+from opentelemetry.metrics import Observation, CallbackOptions
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
 
 cpu_gauge = None
 ram_gauge = None
 
+
 # Callback to gather cpu usage
-def get_cpu_usage_callback():
+def get_cpu_usage_callback(_: CallbackOptions):
     for (number, percent) in enumerate(psutil.cpu_percent(percpu=True)):
         attributes = {"cpu_number": str(number)}
-        yield Measurement(percent, cpu_gauge, attributes)
+        yield Observation(percent, attributes)
 
 
 # Callback to gather RAM memory usage
-def get_ram_usage_callback():
+def get_ram_usage_callback(_: CallbackOptions):
     ram_percent = psutil.virtual_memory().percent
-    yield Measurement(ram_percent, ram_gauge)
+    yield Observation(ram_percent)
+
 
 
 def parse_arguments():
@@ -104,15 +106,16 @@ if __name__ == '__main__':
     # This call sets up the MeterProvider, with a PeriodicExportingMetricReader that exports every 5000 ms
     # and the Dynatrace exporter exporting to args.endpoint with args.token
     logger.debug("setting up global OpenTelemetry configuration.")
-    _metrics.set_meter_provider(MeterProvider(
+    metrics.set_meter_provider(MeterProvider(
         metric_readers=[PeriodicExportingMetricReader(
             export_interval_millis=5000,
             exporter=DynatraceMetricsExporter(args.endpoint, args.token,
                                               prefix="otel.python",
                                               export_dynatrace_metadata=args.metadata_enrichment,
-                                              default_dimensions={"default1": "defval1"}))]))
+                                              default_dimensions={
+                                                  "default1": "defval1"}))]))
 
-    meter = _metrics.get_meter(script_name)
+    meter = metrics.get_meter(script_name)
 
     logger.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
