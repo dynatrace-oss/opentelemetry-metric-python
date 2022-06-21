@@ -1,8 +1,12 @@
 # Dynatrace OpenTelemetry Metrics Exporter for Python
 
-> This exporter is based on the OpenTelemetry Metrics SDK for Python, which is currently in an alpha state and neither considered stable nor complete as of this writing.
-> As such, this exporter is not intended for production use until the underlying OpenTelemetry Metrics API and SDK are stable.
-> See [open-telemetry/opentelemetry-python](https://github.com/open-telemetry/opentelemetry-python) for the current state of the OpenTelemetry SDK for Python.
+This exporter allows exporting metrics created using the [OpenTelemetry SDK for Python](https://github.com/open-telemetry/opentelemetry-python)
+directly to [Dynatrace](https://www.dynatrace.com).
+
+It was built against OpenTelemetry SDK version 1.12-rc1 and should work with any 1.12+ version.
+
+More information on exporting OpenTelemetry metrics to Dynatrace can be found in the
+[Dynatrace documentation](https://www.dynatrace.com/support/help/shortlink/opentelemetry-metrics).
 
 ## Getting started
 
