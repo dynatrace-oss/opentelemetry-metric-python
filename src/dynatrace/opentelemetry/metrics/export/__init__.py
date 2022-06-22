@@ -178,14 +178,12 @@ class DynatraceMetricsExporter(MetricExporter):
 
     def export(self,
                metrics_data: MetricsData,
-               timeout_millis: float = 10_000,
                **kwargs) -> MetricExportResult:
         """
                 Export Metrics to Dynatrace
 
                 Parameters
                 ----------
-                timeout_millis
                 metrics_data : MetricsData, required
                     The Metrics to be exported
 
