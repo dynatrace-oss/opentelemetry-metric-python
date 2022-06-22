@@ -171,13 +171,13 @@ class TestExporter(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_with_attributes(self, mock_post):
+    def test_with_default_dimensions(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
-        attributes = {"attribute1": "tv1", "attribute2": "tv2"}
-        exporter = DynatraceMetricsExporter(default_dimensions=attributes)
+        dimensions = {"attribute1": "tv1", "attribute2": "tv2"}
+        exporter = DynatraceMetricsExporter(default_dimensions=dimensions)
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
