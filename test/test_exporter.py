@@ -225,46 +225,66 @@ class TestExporter(unittest.TestCase):
         (".",)
     ])
     def test_invalid_metricname_skipped(self, instrument_name):
-        with patch('dynatrace.metric.utils.dynatrace_metrics_api_constants'
-                   '.DynatraceMetricsApiConstants.payload_lines_limit') as mock_const:
-            with patch.object(requests.Session, 'post') as mock_post:
-                mock_post.return_value = self._get_session_response()
-                mock_const.return_value = 2
+        with patch.object(requests.Session, 'post') as mock_post:
+            mock_post.return_value = self._get_session_response()
 
-                metrics = []
-                for n in range(4):
-                    data = self._create_sum(n)
-                    if n == 3:
-                        # create metrics with invalid name.
-                        metric = self._metric_from_data(data,
-                                                        instrument_name=instrument_name)
-                        metrics.append(metric)
-                    else:
-                        metrics.append(self._metric_from_data(data))
+            metrics = []
+            for n in range(4):
+                data = self._create_sum(n)
+                if n == 3:
+                    # create metrics with invalid name.
+                    metric = self._metric_from_data(data,
+                                                    instrument_name=instrument_name)
+                    metrics.append(metric)
+                else:
+                    metrics.append(self._metric_from_data(data))
 
-                first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\n" \
-                                 "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
-                    .format(self._test_timestamp_millis)
+            expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\n" \
+                       "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
+                       "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n" \
+                .format(self._test_timestamp_millis)
 
-                # the second export misses the metric with delta=3 because the name was invalid
-                second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n" \
-                    .format(str(self._test_timestamp_millis))
+            exporter = DynatraceMetricsExporter()
+            result = exporter.export(
+                self._metrics_data_from_metrics(metrics))
 
-                exporter = DynatraceMetricsExporter()
-                result = exporter.export(
-                    self._metrics_data_from_metrics(metrics))
+            self.assertEqual(MetricExportResult.SUCCESS, result)
 
-                self.assertEqual(MetricExportResult.SUCCESS, result)
+            mock_post.assert_any_call(
+                self._ingest_endpoint,
+                data=expected,
+                headers=self._headers)
 
-                mock_post.assert_any_call(
-                    self._ingest_endpoint,
-                    data=second_expected,
-                    headers=self._headers)
+    @patch.object(requests.Session, 'post')
+    @patch('dynatrace.metric.utils.dynatrace_metrics_api_constants'
+           '.DynatraceMetricsApiConstants.payload_lines_limit')
+    def test_batching(self, mock_const, mock_post):
+        mock_post.return_value = self._get_session_response()
+        mock_const.return_value = 1
 
-                mock_post.assert_any_call(
-                    self._ingest_endpoint,
-                    data=first_expected,
-                    headers=self._headers)
+        metrics = [self._create_sum(n) for n in range(2)]
+
+        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\n" \
+            .format(self._test_timestamp_millis)
+        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
+            .format(self._test_timestamp_millis)
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export(
+            self._metrics_data_from_data(metrics))
+
+        # should have failed the whole batch as the second POST request failed
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+
+        mock_post.assert_any_call(
+            self._ingest_endpoint,
+            data=first_expected,
+            headers=self._headers)
+
+        mock_post.assert_any_call(
+            self._ingest_endpoint,
+            data=second_expected,
+            headers=self._headers)
 
     @patch.object(requests.Session, 'post')
     @patch('dynatrace.metric.utils.dynatrace_metrics_api_constants'
