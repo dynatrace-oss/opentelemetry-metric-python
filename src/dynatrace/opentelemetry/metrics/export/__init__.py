@@ -189,11 +189,6 @@ class DynatraceMetricsExporter(MetricExporter):
                 metrics_data : MetricsData, required
                     The Metrics to be exported
 
-                Raises
-                ------
-                HTTPError
-                    If one occurred
-
                 Returns
                 -------
                 MetricExportResult
@@ -201,10 +196,6 @@ class DynatraceMetricsExporter(MetricExporter):
                 """
         if len(metrics_data.resource_metrics) == 0:
             return MetricExportResult.SUCCESS
-
-        # split all metrics into batches of
-        # DynatraceMetricApiConstants.PayloadLinesLimit lines
-        chunk_size = DynatraceMetricsApiConstants.payload_lines_limit()
 
         string_buffer = []
         for resource_metric in metrics_data.resource_metrics:
@@ -218,19 +209,9 @@ class DynatraceMetricsExporter(MetricExporter):
                         try:
                             string_buffer.append(
                                 self._serializer.serialize(dt_metric))
-                            string_buffer.append("\n")
                         except MetricError as ex:
                             self.__logger.warning(
                                 "Failed to serialize metric. Skipping: %s", ex)
-
-                        if len(string_buffer) / 2 >= chunk_size:
-                            try:
-                                self._send_lines(string_buffer)
-                                string_buffer = []
-                            except Exception as ex:
-                                self.__logger.warning(
-                                    "Failed to export metrics: %s", ex)
-                                return MetricExportResult.FAILURE
         try:
             self._send_lines(string_buffer)
         except Exception as ex:
@@ -239,17 +220,23 @@ class DynatraceMetricsExporter(MetricExporter):
             return MetricExportResult.FAILURE
         return MetricExportResult.SUCCESS
 
-    def _send_lines(self, string_buffer):
-        serialized_records = "".join(string_buffer)
-        self.__logger.debug(
-            "sending lines:\n" + serialized_records)
-        with self._session.post(self._endpoint_url,
-                                data=serialized_records,
-                                headers=self._headers) as resp:
-            resp.raise_for_status()
+    def _send_lines(self, metric_lines):
+        # split all metrics into batches of
+        # DynatraceMetricApiConstants.PayloadLinesLimit lines
+        chunk_size = DynatraceMetricsApiConstants.payload_lines_limit()
+
+        for index in range(0, len(metric_lines), chunk_size):
+            metric_lines_chunk = metric_lines[index:index + chunk_size]
+            serialized_records = "\n".join(metric_lines_chunk) + "\n"
             self.__logger.debug(
-                "got response: {}".format(
-                    resp.content.decode("utf-8")))
+                "sending lines:\n" + serialized_records)
+            with self._session.post(self._endpoint_url,
+                                    data=serialized_records,
+                                    headers=self._headers) as resp:
+                resp.raise_for_status()
+                self.__logger.debug(
+                    "got response: {}".format(
+                        resp.content.decode("utf-8")))
 
     def _sum_to_dynatrace_metric(self, metric: Metric, point: NumberDataPoint):
         if isinstance(point.value, float):
