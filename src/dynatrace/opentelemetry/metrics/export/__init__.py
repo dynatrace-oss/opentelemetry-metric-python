@@ -38,7 +38,7 @@ from opentelemetry.sdk.metrics.export import (
     HistogramDataPoint
 )
 
-VERSION = "0.3.0b0"
+VERSION = "0.3.0-rc1"
 
 
 def _get_histogram_max(histogram: HistogramDataPoint):
