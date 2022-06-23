@@ -310,7 +310,8 @@ class DynatraceMetricsExporter(MetricExporter):
 
     def _sum_to_dynatrace_metric(self, metric: Metric, point: NumberDataPoint):
         if metric.data.is_monotonic:
-            if metric.data.aggregation_temporality != AggregationTemporality.DELTA:
+            if metric.data.aggregation_temporality != \
+                    AggregationTemporality.DELTA:
                 self._log_temporality_mismatch(
                     "monotonic Sum",
                     metric,
@@ -318,7 +319,8 @@ class DynatraceMetricsExporter(MetricExporter):
                 return None
             return self._monotonic_to_dynatrace_metric(metric, point)
         else:
-            if metric.data.aggregation_temporality != AggregationTemporality.CUMULATIVE:
+            if metric.data.aggregation_temporality != \
+                    AggregationTemporality.CUMULATIVE:
                 self._log_temporality_mismatch(
                     "non-monotonic Sum",
                     metric,
