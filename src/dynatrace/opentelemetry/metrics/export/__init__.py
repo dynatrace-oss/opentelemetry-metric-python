@@ -17,6 +17,8 @@ import math
 import requests
 from typing import Mapping, Optional
 
+import opentelemetry.sdk.metrics as metrics
+
 from dynatrace.metric.utils import (
     DynatraceMetricsSerializer,
     DynatraceMetricsApiConstants,
@@ -39,6 +41,15 @@ from opentelemetry.sdk.metrics.export import (
 )
 
 VERSION = "0.3.0-rc1"
+
+DYNATRACE_TEMPORALITY_PREFERENCE = {
+    metrics.Counter: AggregationTemporality.DELTA,
+    metrics.UpDownCounter: AggregationTemporality.CUMULATIVE,
+    metrics.Histogram: AggregationTemporality.DELTA,
+    metrics.ObservableCounter: AggregationTemporality.DELTA,
+    metrics.ObservableUpDownCounter: AggregationTemporality.CUMULATIVE,
+    metrics.ObservableGauge: AggregationTemporality.CUMULATIVE,
+}
 
 
 def _get_histogram_max(histogram: HistogramDataPoint):
@@ -172,10 +183,6 @@ class DynatraceMetricsExporter(MetricExporter):
             else:
                 self._headers["Authorization"] = "Api-Token " + api_token
 
-    @property
-    def preferred_temporality(self) -> AggregationTemporality:
-        return AggregationTemporality.DELTA
-
     def export(self,
                metrics_data: MetricsData,
                **kwargs) -> MetricExportResult:
@@ -236,7 +243,22 @@ class DynatraceMetricsExporter(MetricExporter):
                     "got response: {}".format(
                         resp.content.decode("utf-8")))
 
-    def _sum_to_dynatrace_metric(self, metric: Metric, point: NumberDataPoint):
+    def _log_temporality_mismatch(
+            self,
+            metric_type:
+            str, metric: Metric,
+            supported_temporality: AggregationTemporality):
+        self.__logger.warning("Failed to create Dynatrace metric: "
+                              "exporter received %s '%s' with "
+                              "AggregationTemporality.%s, but only "
+                              "AggregationTemporality.%s is supported.",
+                              metric_type,
+                              metric.name,
+                              metric.data.aggregation_temporality.name,
+                              supported_temporality.name)
+
+    def _monotonic_to_dynatrace_metric(self, metric: Metric,
+                                       point: NumberDataPoint):
         if isinstance(point.value, float):
             return self._metric_factory.create_float_counter_delta(
                 metric.name,
@@ -250,8 +272,8 @@ class DynatraceMetricsExporter(MetricExporter):
                 dict(point.attributes),
                 int(point.time_unix_nano / 1000000))
 
-    def _gauge_to_dynatrace_metric(self, metric: Metric,
-                                   point: NumberDataPoint):
+    def _non_monotonic_to_dynatrace_metric(self, metric: Metric,
+                                           point: NumberDataPoint):
         if isinstance(point.value, float):
             return self._metric_factory.create_float_gauge(
                 metric.name,
@@ -267,6 +289,16 @@ class DynatraceMetricsExporter(MetricExporter):
 
     def _histogram_to_dynatrace_metric(self, metric: Metric,
                                        point: HistogramDataPoint):
+        # only allow AggregationTemporality.DELTA
+        if metric.data.aggregation_temporality != AggregationTemporality.DELTA:
+            self.__logger.warning("Failed to create Dynatrace metric: "
+                                  "exporter received Histogram '%s' with "
+                                  "AggregationTemporality.%s, but only "
+                                  "AggregationTemporality.DELTA is supported.",
+                                  metric.name,
+                                  metric.data.aggregation_temporality.name)
+            return None
+
         return self._metric_factory.create_float_summary(
             metric.name,
             _get_histogram_min(point),
@@ -276,6 +308,24 @@ class DynatraceMetricsExporter(MetricExporter):
             dict(point.attributes),
             int(point.time_unix_nano / 1000000))
 
+    def _sum_to_dynatrace_metric(self, metric: Metric, point: NumberDataPoint):
+        if metric.data.is_monotonic:
+            if metric.data.aggregation_temporality != AggregationTemporality.DELTA:
+                self._log_temporality_mismatch(
+                    "monotonic Sum",
+                    metric,
+                    supported_temporality=AggregationTemporality.DELTA)
+                return None
+            return self._monotonic_to_dynatrace_metric(metric, point)
+        else:
+            if metric.data.aggregation_temporality != AggregationTemporality.CUMULATIVE:
+                self._log_temporality_mismatch(
+                    "non-monotonic Sum",
+                    metric,
+                    supported_temporality=AggregationTemporality.CUMULATIVE)
+                return None
+            return self._non_monotonic_to_dynatrace_metric(metric, point)
+
     def _to_dynatrace_metric(self, metric: Metric, point: DataPointT):
         try:
             if isinstance(metric.data, Sum):
@@ -283,7 +333,8 @@ class DynatraceMetricsExporter(MetricExporter):
             if isinstance(metric.data, Histogram):
                 return self._histogram_to_dynatrace_metric(metric, point)
             if isinstance(metric.data, Gauge):
-                return self._gauge_to_dynatrace_metric(metric, point)
+                # allow any temporality.
+                return self._non_monotonic_to_dynatrace_metric(metric, point)
 
             self.__logger.warning("Failed to create a Dynatrace metric, "
                                   "unsupported metric point type: %s",

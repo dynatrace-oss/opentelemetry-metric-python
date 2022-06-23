@@ -39,7 +39,8 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from parameterized import parameterized
 
-from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
+from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter, \
+    DYNATRACE_TEMPORALITY_PREFERENCE
 
 
 class AnyStringMatching(str):
@@ -51,7 +52,10 @@ class TestExporter(unittest.TestCase):
 
     def setUp(self) -> None:
         self._instrument_name = "my.instr"
-        self._attributes = (("l1", "v1"), ("l2", "v2"))
+        self._attributes = {
+            "l1": "v1",
+            "l2": "v2"
+        }
         self._headers = {
             "Accept": "*/*; q=0",
             "Content-Type": "text/plain; charset=utf-8",
@@ -321,7 +325,7 @@ class TestExporter(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_sum_delta(self, mock_post):
+    def test_sum_delta_monotonic_exported_as_counter(self, mock_post):
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
         exporter = DynatraceMetricsExporter()
@@ -336,9 +340,38 @@ class TestExporter(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_sum_delta_non_monotonic(self, mock_post):
-        metrics_data = self._metrics_data_from_data(
-            [self._create_sum(250, monotonic=False)])
+    def test_sum_delta_non_monotonic_is_dropped(self, mock_post):
+        metrics_data = self._metrics_data_from_data([
+            self._create_sum(
+                10,
+                monotonic=False,
+                aggregation_temporality=AggregationTemporality.DELTA)])
+
+        exporter = DynatraceMetricsExporter()
+
+        result = exporter.export(metrics_data)
+
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+        mock_post.assert_not_called()
+
+    @patch.object(requests.Session, 'post')
+    def test_sum_cumulative_monotonic_is_dropped(self, mock_post):
+        metrics_data = self._metrics_data_from_data([self._create_sum(10,
+                                                                      monotonic=True,
+                                                                      aggregation_temporality=AggregationTemporality.CUMULATIVE)])
+
+        exporter = DynatraceMetricsExporter()
+
+        result = exporter.export(metrics_data)
+
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+        mock_post.assert_not_called()
+
+    @patch.object(requests.Session, 'post')
+    def test_sum_cumulative_non_monotonic_exported_as_gauge(self, mock_post):
+        metrics_data = self._metrics_data_from_data([self._create_sum(10,
+                                                                      monotonic=False,
+                                                                      aggregation_temporality=AggregationTemporality.CUMULATIVE)])
 
         exporter = DynatraceMetricsExporter()
 
@@ -347,8 +380,8 @@ class TestExporter(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=250 {0}\n"
-                .format(self._test_timestamp_millis),
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}\n"
+                .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -367,7 +400,7 @@ class TestExporter(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_histogram_reported_as_gauge(self, mock_post):
+    def test_histogram_exported_as_gauge(self, mock_post):
         data = self._create_histogram(
             bucket_counts=[1, 2, 4, 5],
             explicit_bounds=[0, 5, 10],
@@ -389,7 +422,23 @@ class TestExporter(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_histogram_without_min_max_reported_as_estimated_gauge(self,
+    def test_cumulative_histogram_dropped(self, mock_post):
+        data = self._create_histogram(
+            bucket_counts=[1, 2, 4, 5],
+            explicit_bounds=[0, 5, 10],
+            aggregation_temporality=AggregationTemporality.CUMULATIVE
+        )
+
+        metrics_data = self._metrics_data_from_data([data])
+
+        exporter = DynatraceMetricsExporter()
+        result = exporter.export(metrics_data)
+
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+        mock_post.assert_not_called()
+
+    @patch.object(requests.Session, 'post')
+    def test_histogram_without_min_max_exported_as_estimated_gauge(self,
                                                                    mock_post):
 
         data = self._create_histogram(bucket_counts=[1, 2, 4, 5],
@@ -419,9 +468,10 @@ class TestExporter(unittest.TestCase):
             self._create_gauge(value=20),
             self._create_histogram(bucket_counts=[1, 2, 4, 5],
                                    explicit_bounds=[0, 5, 10],
-                                   histogram_sum=87,
                                    histogram_min=-3,
-                                   histogram_max=12)
+                                   histogram_max=12,
+                                   histogram_sum=87
+                                   )
         ]
         exporter = DynatraceMetricsExporter()
         result = exporter.export(self._metrics_data_from_data(data))
@@ -445,6 +495,7 @@ class TestExporter(unittest.TestCase):
 
         metric_reader = PeriodicExportingMetricReader(
             export_interval_millis=3600000,
+            preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
             # 1h so that the test can finish before the collection event fires.
             exporter=exporter)
 
@@ -500,41 +551,42 @@ class TestExporter(unittest.TestCase):
             data=data
         )
 
-    def _create_sum(self, value: int, monotonic=True) -> Sum:
+    def _create_sum(self, value: int, monotonic=True,
+                    aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA) -> Sum:
         return Sum(
             is_monotonic=monotonic,
-            aggregation_temporality=AggregationTemporality.DELTA,
+            aggregation_temporality=aggregation_temporality,
             data_points=[
                 NumberDataPoint(
                     start_time_unix_nano=self._test_timestamp_nanos,
                     time_unix_nano=self._test_timestamp_nanos,
                     value=value,
-                    attributes=dict(self._attributes)
+                    attributes=self._attributes
                 )
             ])
 
-    def _create_gauge(self, value: int, monotonic=True) -> Gauge:
+    def _create_gauge(self, value: int) -> Gauge:
         return Gauge(
             data_points=[
                 NumberDataPoint(
                     start_time_unix_nano=self._test_timestamp_nanos,
                     time_unix_nano=self._test_timestamp_nanos,
                     value=value,
-                    attributes=dict(self._attributes)
+                    attributes=self._attributes
                 )
             ])
 
     def _create_histogram(self,
                           bucket_counts: Sequence[int],
                           explicit_bounds: Sequence[int],
-                          histogram_sum: Union[int, float],
-                          histogram_min: Union[int, float],
-                          histogram_max: Union[int, float]) -> Histogram:
+                          histogram_sum: Union[int, float] = 0,
+                          histogram_min: Union[int, float] = 0,
+                          histogram_max: Union[int, float] = 0,
+                          aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA) -> Histogram:
         return Histogram(
             data_points=[
                 HistogramDataPoint(
-                    attributes=dict(self._attributes),
-                    # todo: make this dict in the first place
+                    attributes=self._attributes,
                     bucket_counts=bucket_counts,
                     explicit_bounds=explicit_bounds,
                     count=sum(bucket_counts),
@@ -545,7 +597,7 @@ class TestExporter(unittest.TestCase):
                     start_time_unix_nano=self._test_timestamp_nanos,
                 )
             ],
-            aggregation_temporality=AggregationTemporality.DELTA,
+            aggregation_temporality=aggregation_temporality,
         )
 
     @staticmethod

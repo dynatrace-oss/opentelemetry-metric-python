@@ -30,6 +30,7 @@ exporter = DynatraceMetricsExporter(endpoint_url, api_token)
 metrics.set_meter_provider(MeterProvider(
         metric_readers=[PeriodicExportingMetricReader(
             export_interval_millis=5000,
+            preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
             exporter=exporter)]))
 
 # get a meter
@@ -43,7 +44,7 @@ counter = meter.create_counter(
     value_type=int
 )
 
-counter.add(25, {"dimension-1", "value-1"})
+counter.add(25, {"dimension-1": "value-1"})
 ```
 
 ### Example

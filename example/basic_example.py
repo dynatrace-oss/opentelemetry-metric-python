@@ -19,17 +19,17 @@ import random
 import time
 from os.path import splitext, basename
 
-import psutil
 import opentelemetry.metrics as metrics
+import psutil
 from opentelemetry.metrics import Observation, CallbackOptions
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
-from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
+from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter, \
+    DYNATRACE_TEMPORALITY_PREFERENCE
 
 cpu_gauge = None
 ram_gauge = None
-
 
 # Callback to gather cpu usage
 def get_cpu_usage_callback(_: CallbackOptions):
@@ -42,7 +42,6 @@ def get_cpu_usage_callback(_: CallbackOptions):
 def get_ram_usage_callback(_: CallbackOptions):
     ram_percent = psutil.virtual_memory().percent
     yield Observation(ram_percent)
-
 
 
 def parse_arguments():
@@ -109,6 +108,7 @@ if __name__ == '__main__':
     metrics.set_meter_provider(MeterProvider(
         metric_readers=[PeriodicExportingMetricReader(
             export_interval_millis=5000,
+            preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
             exporter=DynatraceMetricsExporter(args.endpoint, args.token,
                                               prefix="otel.python",
                                               export_dynatrace_metadata=args.metadata_enrichment,
