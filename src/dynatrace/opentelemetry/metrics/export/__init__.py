@@ -197,7 +197,8 @@ class DynatraceMetricsExporter(MetricExporter):
                 Returns
                 -------
                 MetricExportResult
-                    Indicates SUCCESS or FAILURE
+                    Indicates SUCCESS (all metrics exported successfully)
+                    or FAILURE (otherwise)
                 """
         if len(metrics_data.resource_metrics) == 0:
             return MetricExportResult.SUCCESS
