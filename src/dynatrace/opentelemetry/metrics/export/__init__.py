@@ -291,12 +291,9 @@ class DynatraceMetricsExporter(MetricExporter):
                                        point: HistogramDataPoint):
         # only allow AggregationTemporality.DELTA
         if metric.data.aggregation_temporality != AggregationTemporality.DELTA:
-            self.__logger.warning("Failed to create Dynatrace metric: "
-                                  "exporter received Histogram '%s' with "
-                                  "AggregationTemporality.%s, but only "
-                                  "AggregationTemporality.DELTA is supported.",
-                                  metric.name,
-                                  metric.data.aggregation_temporality.name)
+            self._log_temporality_mismatch("Histogram",
+                                           metric,
+                                           AggregationTemporality.DELTA)
             return None
 
         return self._metric_factory.create_float_summary(
