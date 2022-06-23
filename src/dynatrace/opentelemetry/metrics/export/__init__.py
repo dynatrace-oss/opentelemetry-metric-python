@@ -56,18 +56,16 @@ def _get_histogram_max(histogram: HistogramDataPoint):
     if histogram.max is not None and math.isfinite(histogram.max):
         return histogram.max
 
-    histogram_sum = histogram.sum
-    histogram_count = histogram.count
     if len(histogram.bucket_counts) == 1:
         # In this case, only one bucket exists: (-Inf, Inf). If there were
         # any boundaries, there would be more counts.
         if histogram.bucket_counts[0] > 0:
             # in case the single bucket contains something, use the mean as
             # max.
-            return histogram_sum / histogram_count
+            return histogram.sum / histogram.count
         # otherwise the histogram has no data. Use the sum as the min and
         # max, respectively.
-        return histogram_sum
+        return histogram.sum
 
     # loop over bucket_counts in reverse
     last_element_index = len(histogram.bucket_counts) - 1
@@ -80,32 +78,30 @@ def _get_histogram_max(histogram: HistogramDataPoint):
                 # this bound, thus use the maximum of the estimated bound and
                 # the mean.
                 return max(histogram.explicit_bounds[index - 1],
-                           histogram_sum / histogram_count)
+                           histogram.sum / histogram.count)
             # In any other bucket (lowerBound, upperBound], use the upperBound.
             return histogram.explicit_bounds[index]
 
     # there are no counts > 0, so calculating a mean would result in a
     # division by 0. By returning the sum, we can let the backend decide what
     # to do with the value (with a count of 0)
-    return histogram_sum
+    return histogram.sum
 
 
 def _get_histogram_min(histogram: HistogramDataPoint):
     if histogram.min is not None and math.isfinite(histogram.min):
         return histogram.min
 
-    histogram_sum = histogram.sum
-    histogram_count = histogram.count
     if len(histogram.bucket_counts) == 1:
         # In this case, only one bucket exists: (-Inf, Inf). If there were
         # any boundaries, there would be more counts.
         if histogram.bucket_counts[0] > 0:
             # in case the single bucket contains something, use the mean as
             # min.
-            return histogram_sum / histogram_count
+            return histogram.sum / histogram.count
         # otherwise the histogram has no data. Use the sum as the min and
         # max, respectively.
-        return histogram_sum
+        return histogram.sum
 
     # iterate all buckets to find the first bucket with count > 0
     for index in range(0, len(histogram.bucket_counts)):
@@ -120,7 +116,7 @@ def _get_histogram_min(histogram: HistogramDataPoint):
                 # - The lowest boundary
                 # - The histogram's average (histogram sum / sum of counts)
                 return min(histogram.explicit_bounds[index],
-                           histogram_sum / histogram_count)
+                           histogram.sum / histogram.count)
             # In all other buckets (lowerBound, upperBound] use the
             # lowerBound to estimate min.
             return histogram.explicit_bounds[index - 1]
@@ -128,7 +124,7 @@ def _get_histogram_min(histogram: HistogramDataPoint):
     # there are no counts > 0, so calculating a mean would result in a
     # division by 0. By returning the sum, we can let the backend decide what
     # to do with the value (with a count of 0)
-    return histogram_sum
+    return histogram.sum
 
 
 class DynatraceMetricsExporter(MetricExporter):
