@@ -310,9 +310,10 @@ class _DynatraceMetricsExporter(MetricExporter):
                                        point: HistogramDataPoint):
         # only allow AggregationTemporality.DELTA
         if metric.data.aggregation_temporality != AggregationTemporality.DELTA:
-            self._log_temporality_mismatch("Histogram",
-                                           metric,
-                                           AggregationTemporality.DELTA)
+            self._log_temporality_mismatch(
+                "Histogram",
+                metric,
+                supported_temporality=AggregationTemporality.DELTA)
             return None
 
         return self._metric_factory.create_float_summary(
@@ -351,7 +352,7 @@ class _DynatraceMetricsExporter(MetricExporter):
             if isinstance(metric.data, Histogram):
                 return self._histogram_to_dynatrace_metric(metric, point)
             if isinstance(metric.data, Gauge):
-                # allow any temporality.
+                # gauge does not support or require temporality.
                 return self._non_monotonic_to_dynatrace_metric(metric, point)
 
             self.__logger.warning("Failed to create a Dynatrace metric, "
