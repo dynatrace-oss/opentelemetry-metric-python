@@ -14,6 +14,8 @@
 import math
 import re
 import unittest
+from unittest import mock
+
 import requests
 
 from typing import Sequence, Union
@@ -40,7 +42,7 @@ from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from parameterized import parameterized
 
 from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter, \
-    DYNATRACE_TEMPORALITY_PREFERENCE
+    DYNATRACE_TEMPORALITY_PREFERENCE, configure_dynatrace_exporter
 
 
 class AnyStringMatching(str):
@@ -520,6 +522,61 @@ class TestExporter(unittest.TestCase):
 
         # shut down cleanly to avoid failed exports later.
         meter_provider.shutdown()
+
+    def test_configuration_default(self):
+        with patch.object(PeriodicExportingMetricReader,
+                          "__init__") as mock_reader:
+            with patch.object(DynatraceMetricsExporter,
+                              "__init__") as mock_exporter:
+                mock_reader.return_value = None
+                mock_exporter.return_value = None
+                self.assertIsInstance(configure_dynatrace_exporter(),
+                                      PeriodicExportingMetricReader)
+                mock_exporter.assert_called_once_with(
+                    endpoint_url=None,
+                    api_token=None,
+                    prefix=None,
+                    default_dimensions=None,
+                    export_dynatrace_metadata=False
+                )
+                mock_reader.assert_called_once_with(
+                    export_interval_millis=None,
+                    preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
+                    exporter=mock.ANY,
+                )
+                self.assertIsInstance(mock_reader.call_args.kwargs["exporter"],
+                                      DynatraceMetricsExporter)
+
+    def test_configuration_custom(self):
+        with patch.object(PeriodicExportingMetricReader,
+                          "__init__") as mock_reader:
+            with patch.object(DynatraceMetricsExporter,
+                              "__init__") as mock_exporter:
+                mock_reader.return_value = None
+                mock_exporter.return_value = None
+                self.assertIsInstance(configure_dynatrace_exporter(
+                    endpoint_url="endpoint.url",
+                    export_dynatrace_metadata=True,
+                    export_interval_millis=100,
+                    api_token="dt.APItoken",
+                    prefix="otel.python.test",
+                    default_dimensions={"defaultKey": "defaultValue"}
+                ),
+                                      PeriodicExportingMetricReader)
+                mock_exporter.assert_called_once_with(
+                    endpoint_url="endpoint.url",
+                    api_token="dt.APItoken",
+                    prefix="otel.python.test",
+                    default_dimensions={"defaultKey": "defaultValue"},
+                    export_dynatrace_metadata=True
+                )
+                mock_reader.assert_called_once_with(
+                    export_interval_millis=100,
+                    preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
+                    exporter=mock.ANY,
+                )
+                self.assertIsInstance(mock_reader.call_args.kwargs["exporter"],
+                                      DynatraceMetricsExporter)
 
     def _metrics_data_from_metrics(self,
                                    metrics: Sequence[Metric]) -> MetricsData:

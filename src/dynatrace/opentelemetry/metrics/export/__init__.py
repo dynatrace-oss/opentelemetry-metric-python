@@ -37,7 +37,8 @@ from opentelemetry.sdk.metrics.export import (
     DataPointT,
     NumberDataPoint,
     Metric,
-    HistogramDataPoint
+    HistogramDataPoint,
+    PeriodicExportingMetricReader
 )
 
 VERSION = "0.3.0-rc1"
@@ -50,6 +51,27 @@ DYNATRACE_TEMPORALITY_PREFERENCE = {
     metrics.ObservableUpDownCounter: AggregationTemporality.CUMULATIVE,
     metrics.ObservableGauge: AggregationTemporality.CUMULATIVE,
 }
+
+
+def configure_dynatrace_exporter(
+        endpoint_url: Optional[str] = None,
+        api_token: Optional[str] = None,
+        prefix: Optional[str] = None,
+        default_dimensions: Optional[Mapping[str, str]] = None,
+        export_dynatrace_metadata: Optional[bool] = False,
+        export_interval_millis: Optional[float] = None
+):
+    return PeriodicExportingMetricReader(
+        export_interval_millis=export_interval_millis,
+        preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
+        exporter=DynatraceMetricsExporter(
+            endpoint_url=endpoint_url,
+            api_token=api_token,
+            prefix=prefix,
+            default_dimensions=default_dimensions,
+            export_dynatrace_metadata=export_dynatrace_metadata
+        )
+    )
 
 
 def _get_histogram_max(histogram: HistogramDataPoint):
