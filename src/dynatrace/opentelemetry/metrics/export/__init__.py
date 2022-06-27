@@ -270,13 +270,13 @@ class _DynatraceMetricsExporter(MetricExporter):
         self.__logger.warning("Failed to create Dynatrace metric: "
                               "exporter received %s '%s' with "
                               "AggregationTemporality.%s, but only "
-                              "AggregationTemporality.%s is supported.",
+                              "AggregationTemporality.%s is currently supported.",
                               metric_type,
                               metric.name,
                               metric.data.aggregation_temporality.name,
                               supported_temporality.name)
 
-    def _monotonic_to_dynatrace_metric(self, metric: Metric,
+    def _monotonic_sum_to_dynatrace_metric(self, metric: Metric,
                                        point: NumberDataPoint):
         if isinstance(point.value, float):
             return self._metric_factory.create_float_counter_delta(

@@ -327,7 +327,7 @@ class TestExporter(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_sum_delta_monotonic_exported_as_counter(self, mock_post):
+    def test_monotonic_delta_sum_exported_as_counter(self, mock_post):
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
         exporter = _DynatraceMetricsExporter()
@@ -342,7 +342,7 @@ class TestExporter(unittest.TestCase):
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
-    def test_sum_delta_non_monotonic_is_dropped(self, mock_post):
+    def test_non_monotonic_delta_sum_is_dropped(self, mock_post):
         metrics_data = self._metrics_data_from_data([
             self._create_sum(
                 10,
@@ -357,7 +357,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_not_called()
 
     @patch.object(requests.Session, 'post')
-    def test_sum_cumulative_monotonic_is_dropped(self, mock_post):
+    def test_monotonic_cumulative_sum_is_dropped(self, mock_post):
         metrics_data = self._metrics_data_from_data([self._create_sum(10,
                                                                       monotonic=True,
                                                                       aggregation_temporality=AggregationTemporality.CUMULATIVE)])
@@ -370,7 +370,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_not_called()
 
     @patch.object(requests.Session, 'post')
-    def test_sum_cumulative_non_monotonic_exported_as_gauge(self, mock_post):
+    def test_non_monotonic_cumulative_sum_exported_as_gauge(self, mock_post):
         metrics_data = self._metrics_data_from_data([self._create_sum(10,
                                                                       monotonic=False,
                                                                       aggregation_temporality=AggregationTemporality.CUMULATIVE)])
