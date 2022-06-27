@@ -43,7 +43,7 @@ from opentelemetry.sdk.metrics.export import (
 
 VERSION = "0.3.0-rc1"
 
-DYNATRACE_TEMPORALITY_PREFERENCE = {
+_DYNATRACE_TEMPORALITY_PREFERENCE = {
     metrics.Counter: AggregationTemporality.DELTA,
     metrics.UpDownCounter: AggregationTemporality.CUMULATIVE,
     metrics.Histogram: AggregationTemporality.DELTA,
@@ -63,8 +63,8 @@ def configure_dynatrace_exporter(
 ):
     return PeriodicExportingMetricReader(
         export_interval_millis=export_interval_millis,
-        preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
-        exporter=DynatraceMetricsExporter(
+        preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
+        exporter=_DynatraceMetricsExporter(
             endpoint_url=endpoint_url,
             api_token=api_token,
             prefix=prefix,
@@ -149,7 +149,7 @@ def _get_histogram_min(histogram: HistogramDataPoint):
     return histogram.sum
 
 
-class DynatraceMetricsExporter(MetricExporter):
+class _DynatraceMetricsExporter(MetricExporter):
     """
     A class which implements the OpenTelemetry MetricsExporter interface
 

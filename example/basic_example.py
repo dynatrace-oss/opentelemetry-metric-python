@@ -23,13 +23,12 @@ import opentelemetry.metrics as metrics
 import psutil
 from opentelemetry.metrics import Observation, CallbackOptions
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
-from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter, \
-    DYNATRACE_TEMPORALITY_PREFERENCE
+from dynatrace.opentelemetry.metrics.export import configure_dynatrace_exporter
 
 cpu_gauge = None
 ram_gauge = None
+
 
 # Callback to gather cpu usage
 def get_cpu_usage_callback(_: CallbackOptions):
@@ -102,18 +101,19 @@ if __name__ == '__main__':
             "OneAgent endpoint.")
 
     # set up OpenTelemetry for export:
-    # This call sets up the MeterProvider, with a PeriodicExportingMetricReader that exports every 5000 ms
-    # and the Dynatrace exporter exporting to args.endpoint with args.token
     logger.debug("setting up global OpenTelemetry configuration.")
+    # This call sets up the MeterProvider, with a
+    # PeriodicExportingMetricReader that exports every 5000 ms and the
+    # Dynatrace exporter exporting to args.endpoint with args.token
     metrics.set_meter_provider(MeterProvider(
-        metric_readers=[PeriodicExportingMetricReader(
+        metric_readers=[configure_dynatrace_exporter(
             export_interval_millis=5000,
-            preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
-            exporter=DynatraceMetricsExporter(args.endpoint, args.token,
-                                              prefix="otel.python",
-                                              export_dynatrace_metadata=args.metadata_enrichment,
-                                              default_dimensions={
-                                                  "default1": "defval1"}))]))
+            endpoint_url=args.endpoint,
+            api_token=args.token,
+            prefix="otel.python",
+            export_dynatrace_metadata=args.metadata_enrichment,
+            default_dimensions={"default1": "defval1"})
+        ]))
 
     meter = metrics.get_meter(script_name)
 
@@ -152,15 +152,15 @@ if __name__ == '__main__':
     testing_attributes = {"environment": "testing"}
 
     logger.info("starting instrumented application...")
-    try:
-        while True:
-            # Update the metric instruments using the direct calling convention
-            requests_counter.add(random.randint(0, 25), staging_attributes)
-            requests_size.record(random.randint(0, 300), staging_attributes)
+try:
+    while True:
+        # Update the metric instruments using the direct calling convention
+        requests_counter.add(random.randint(0, 25), staging_attributes)
+        requests_size.record(random.randint(0, 300), staging_attributes)
 
-            requests_counter.add(random.randint(0, 35), testing_attributes)
-            requests_size.record(random.randint(0, 100), testing_attributes)
-            time.sleep(5)
+        requests_counter.add(random.randint(0, 35), testing_attributes)
+        requests_size.record(random.randint(0, 100), testing_attributes)
+        time.sleep(5)
 
-    except KeyboardInterrupt:
-        logger.info("shutting down...")
+except KeyboardInterrupt:
+    logger.info("shutting down...")

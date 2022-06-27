@@ -23,15 +23,16 @@ pip install opentelemetry-exporter-dynatrace-metrics
 The general setup of OpenTelemetry Python is explained in the official [Getting Started Guide](https://open-telemetry.github.io/opentelemetry-python/getting-started.html#add-metrics).
 
 ```python
-# configure API endpoint and authentication token
-exporter = DynatraceMetricsExporter(endpoint_url, api_token)
 
 # setup metrics export pipeline
 metrics.set_meter_provider(MeterProvider(
-        metric_readers=[PeriodicExportingMetricReader(
+        # configure Exporter/MetricReader combination with a 5000ms export
+        # interval, endpoint url and API token.
+        metric_readers=[configure_dynatrace_exporter(
             export_interval_millis=5000,
-            preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
-            exporter=exporter)]))
+            endpoint_url=endpoint_url,
+            api_token=api_token)
+        ]))
 
 # get a meter
 meter = metrics.get_meter(__name__)

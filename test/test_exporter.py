@@ -41,8 +41,8 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from parameterized import parameterized
 
-from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter, \
-    DYNATRACE_TEMPORALITY_PREFERENCE, configure_dynatrace_exporter
+from dynatrace.opentelemetry.metrics.export import _DynatraceMetricsExporter, \
+    _DYNATRACE_TEMPORALITY_PREFERENCE, configure_dynatrace_exporter
 
 
 class AnyStringMatching(str):
@@ -73,7 +73,7 @@ class TestExporter(unittest.TestCase):
     def test_empty_records(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
         metrics_data = MetricsData(resource_metrics=[])
         result = exporter.export(metrics_data)
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -86,7 +86,7 @@ class TestExporter(unittest.TestCase):
 
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -105,7 +105,7 @@ class TestExporter(unittest.TestCase):
 
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
-        exporter = DynatraceMetricsExporter(endpoint_url=endpoint)
+        exporter = _DynatraceMetricsExporter(endpoint_url=endpoint)
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -127,8 +127,8 @@ class TestExporter(unittest.TestCase):
 
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
-        exporter = DynatraceMetricsExporter(endpoint_url=endpoint,
-                                            api_token=token)
+        exporter = _DynatraceMetricsExporter(endpoint_url=endpoint,
+                                             api_token=token)
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -148,7 +148,7 @@ class TestExporter(unittest.TestCase):
 
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
-        exporter = DynatraceMetricsExporter(api_token=token)
+        exporter = _DynatraceMetricsExporter(api_token=token)
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -166,7 +166,7 @@ class TestExporter(unittest.TestCase):
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
         prefix = "test_prefix"
-        exporter = DynatraceMetricsExporter(prefix=prefix)
+        exporter = _DynatraceMetricsExporter(prefix=prefix)
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -183,7 +183,7 @@ class TestExporter(unittest.TestCase):
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
         dimensions = {"attribute1": "tv1", "attribute2": "tv2"}
-        exporter = DynatraceMetricsExporter(default_dimensions=dimensions)
+        exporter = _DynatraceMetricsExporter(default_dimensions=dimensions)
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -211,7 +211,7 @@ class TestExporter(unittest.TestCase):
 
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
-        exporter = DynatraceMetricsExporter(
+        exporter = _DynatraceMetricsExporter(
             default_dimensions=default_attributes,
             export_dynatrace_metadata=True)
         result = exporter.export(metrics_data)
@@ -250,7 +250,7 @@ class TestExporter(unittest.TestCase):
                        "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n" \
                 .format(self._test_timestamp_millis)
 
-            exporter = DynatraceMetricsExporter()
+            exporter = _DynatraceMetricsExporter()
             result = exporter.export(
                 self._metrics_data_from_metrics(metrics))
 
@@ -275,7 +275,7 @@ class TestExporter(unittest.TestCase):
         second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
             .format(self._test_timestamp_millis)
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
         result = exporter.export(
             self._metrics_data_from_data(metrics))
 
@@ -309,7 +309,7 @@ class TestExporter(unittest.TestCase):
                           "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=3 {0}\n" \
             .format(self._test_timestamp_millis)
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
         result = exporter.export(
             self._metrics_data_from_data(metrics))
 
@@ -330,7 +330,7 @@ class TestExporter(unittest.TestCase):
     def test_sum_delta_monotonic_exported_as_counter(self, mock_post):
         metrics_data = self._metrics_data_from_data([self._create_sum(10)])
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
 
         result = exporter.export(metrics_data)
 
@@ -349,7 +349,7 @@ class TestExporter(unittest.TestCase):
                 monotonic=False,
                 aggregation_temporality=AggregationTemporality.DELTA)])
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
 
         result = exporter.export(metrics_data)
 
@@ -362,7 +362,7 @@ class TestExporter(unittest.TestCase):
                                                                       monotonic=True,
                                                                       aggregation_temporality=AggregationTemporality.CUMULATIVE)])
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
 
         result = exporter.export(metrics_data)
 
@@ -375,7 +375,7 @@ class TestExporter(unittest.TestCase):
                                                                       monotonic=False,
                                                                       aggregation_temporality=AggregationTemporality.CUMULATIVE)])
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
 
         result = exporter.export(metrics_data)
 
@@ -390,7 +390,7 @@ class TestExporter(unittest.TestCase):
     def test_gauge_reported_as_gauge(self, mock_post):
         data = self._create_gauge(value=10)
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
         result = exporter.export(
             self._metrics_data_from_data([data]))
 
@@ -413,7 +413,7 @@ class TestExporter(unittest.TestCase):
 
         metrics_data = self._metrics_data_from_data([data])
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -433,7 +433,7 @@ class TestExporter(unittest.TestCase):
 
         metrics_data = self._metrics_data_from_data([data])
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -451,7 +451,7 @@ class TestExporter(unittest.TestCase):
                                       )
         metrics_data = self._metrics_data_from_data([data])
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
         result = exporter.export(metrics_data)
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -475,7 +475,7 @@ class TestExporter(unittest.TestCase):
                                    histogram_sum=87
                                    )
         ]
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
         result = exporter.export(self._metrics_data_from_data(data))
 
         expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}\n" \
@@ -493,11 +493,11 @@ class TestExporter(unittest.TestCase):
     def test_view(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
-        exporter = DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter()
 
         metric_reader = PeriodicExportingMetricReader(
             export_interval_millis=3600000,
-            preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
+            preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
             # 1h so that the test can finish before the collection event fires.
             exporter=exporter)
 
@@ -526,7 +526,7 @@ class TestExporter(unittest.TestCase):
     def test_configuration_default(self):
         with patch.object(PeriodicExportingMetricReader,
                           "__init__") as mock_reader:
-            with patch.object(DynatraceMetricsExporter,
+            with patch.object(_DynatraceMetricsExporter,
                               "__init__") as mock_exporter:
                 mock_reader.return_value = None
                 mock_exporter.return_value = None
@@ -541,16 +541,16 @@ class TestExporter(unittest.TestCase):
                 )
                 mock_reader.assert_called_once_with(
                     export_interval_millis=None,
-                    preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
+                    preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                     exporter=mock.ANY,
                 )
                 self.assertIsInstance(mock_reader.call_args.kwargs["exporter"],
-                                      DynatraceMetricsExporter)
+                                      _DynatraceMetricsExporter)
 
     def test_configuration_custom(self):
         with patch.object(PeriodicExportingMetricReader,
                           "__init__") as mock_reader:
-            with patch.object(DynatraceMetricsExporter,
+            with patch.object(_DynatraceMetricsExporter,
                               "__init__") as mock_exporter:
                 mock_reader.return_value = None
                 mock_exporter.return_value = None
@@ -572,11 +572,11 @@ class TestExporter(unittest.TestCase):
                 )
                 mock_reader.assert_called_once_with(
                     export_interval_millis=100,
-                    preferred_temporality=DYNATRACE_TEMPORALITY_PREFERENCE,
+                    preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                     exporter=mock.ANY,
                 )
                 self.assertIsInstance(mock_reader.call_args.kwargs["exporter"],
-                                      DynatraceMetricsExporter)
+                                      _DynatraceMetricsExporter)
 
     def _metrics_data_from_metrics(self,
                                    metrics: Sequence[Metric]) -> MetricsData:
