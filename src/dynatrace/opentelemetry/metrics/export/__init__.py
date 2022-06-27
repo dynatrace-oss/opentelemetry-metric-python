@@ -270,7 +270,8 @@ class _DynatraceMetricsExporter(MetricExporter):
         self.__logger.warning("Failed to create Dynatrace metric: "
                               "exporter received %s '%s' with "
                               "AggregationTemporality.%s, but only "
-                              "AggregationTemporality.%s is currently supported.",
+                              "AggregationTemporality.%s is currently "
+                              "supported.",
                               metric_type,
                               metric.name,
                               metric.data.aggregation_temporality.name,
