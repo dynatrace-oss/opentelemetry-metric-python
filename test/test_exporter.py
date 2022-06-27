@@ -544,8 +544,8 @@ class TestExporter(unittest.TestCase):
                     preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                     exporter=mock.ANY,
                 )
-
-                self.assertIsInstance(mock_reader.call_args_list[0].kwargs["exporter"],
+                _, kwargs = mock_reader.call_args
+                self.assertIsInstance(kwargs.get("exporter"),
                                       _DynatraceMetricsExporter)
 
     def test_configuration_custom(self):
@@ -576,7 +576,8 @@ class TestExporter(unittest.TestCase):
                     preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                     exporter=mock.ANY,
                 )
-                self.assertIsInstance(mock_reader.call_args_list[0].kwargs["exporter"],
+                _, kwargs = mock_reader.call_args
+                self.assertIsInstance(kwargs.get("exporter"),
                                       _DynatraceMetricsExporter)
 
     def _metrics_data_from_metrics(self,
