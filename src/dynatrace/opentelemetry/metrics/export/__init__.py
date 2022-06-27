@@ -278,7 +278,7 @@ class _DynatraceMetricsExporter(MetricExporter):
                               supported_temporality.name)
 
     def _monotonic_sum_to_dynatrace_metric(self, metric: Metric,
-                                       point: NumberDataPoint):
+                                           point: NumberDataPoint):
         if isinstance(point.value, float):
             return self._metric_factory.create_float_counter_delta(
                 metric.name,
