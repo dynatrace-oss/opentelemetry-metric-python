@@ -334,7 +334,7 @@ class _DynatraceMetricsExporter(MetricExporter):
                     metric,
                     supported_temporality=AggregationTemporality.DELTA)
                 return None
-            return self._monotonic_to_dynatrace_metric(metric, point)
+            return self._monotonic_sum_to_dynatrace_metric(metric, point)
         else:
             if metric.data.aggregation_temporality != \
                     AggregationTemporality.CUMULATIVE:
