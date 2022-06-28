@@ -68,7 +68,7 @@ class OTelDynatraceMetricsFactory:
                 return self._histogram_to_dynatrace_metric(metric, point)
             if isinstance(metric.data, Gauge):
                 # gauge does not support or require temporality.
-                return self._non_monotonic_to_dynatrace_metric(metric, point)
+                return self._to_dynatrace_gauge(metric, point)
 
             self.__logger.warning("Failed to create a Dynatrace metric, "
                                   "unsupported metric point type: %s",
@@ -88,7 +88,7 @@ class OTelDynatraceMetricsFactory:
                     metric,
                     supported_temporality=AggregationTemporality.DELTA)
                 return None
-            return self._monotonic_sum_to_dynatrace_metric(metric, point)
+            return self._to_dynatrace_counter(metric, point)
         else:
             if metric.data.aggregation_temporality != \
                     AggregationTemporality.CUMULATIVE:
@@ -97,7 +97,7 @@ class OTelDynatraceMetricsFactory:
                     metric,
                     supported_temporality=AggregationTemporality.CUMULATIVE)
                 return None
-            return self._non_monotonic_to_dynatrace_metric(metric, point)
+            return self._to_dynatrace_gauge(metric, point)
 
     def _histogram_to_dynatrace_metric(self, metric: Metric,
                                        point: HistogramDataPoint):
@@ -118,8 +118,8 @@ class OTelDynatraceMetricsFactory:
             dict(point.attributes),
             int(point.time_unix_nano / 1000000))
 
-    def _monotonic_sum_to_dynatrace_metric(self, metric: Metric,
-                                           point: NumberDataPoint):
+    def _to_dynatrace_counter(self, metric: Metric,
+                              point: NumberDataPoint):
         if isinstance(point.value, float):
             return self._metric_factory.create_float_counter_delta(
                 metric.name,
@@ -133,8 +133,8 @@ class OTelDynatraceMetricsFactory:
                 dict(point.attributes),
                 int(point.time_unix_nano / 1000000))
 
-    def _non_monotonic_to_dynatrace_metric(self, metric: Metric,
-                                           point: NumberDataPoint):
+    def _to_dynatrace_gauge(self, metric: Metric,
+                            point: NumberDataPoint):
         if isinstance(point.value, float):
             return self._metric_factory.create_float_gauge(
                 metric.name,
