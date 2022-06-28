@@ -44,6 +44,38 @@ def configure_dynatrace_exporter(
         export_dynatrace_metadata: Optional[bool] = False,
         export_interval_millis: Optional[float] = None
 ):
+    """
+    Configures and creates a PeriodicExportingMetricReader and
+    DynatraceMetricsExporter combination.
+
+    Parameters
+    ----------
+    endpoint_url: str, Optional
+        The endpoint to send metrics to. Given an environment ID `myenv123` on
+        Dynatrace SaaS, the endpoint_url would be
+        `https://myenv123.live.dynatrace.com/api/v2/metrics/ingest`.
+    api_token: str, Optional
+        The API token for your Dynatrace environment with at least the scope
+        `metrics.ingest`.
+    prefix: str, Optional
+        Will be prepended to each metric key, separated by a dot
+        (`<prefix>.<namespace>.<name>`).
+    default_dimensions: Mapping[str, str], Optional
+        Static dimensions to add to every metric. Dimension keys need
+        to be unique, attributes on instruments will overwrite the default
+        dimensions if key collisions appear.
+    export_dynatrace_metadata: bool, Optional (default `True`)
+        If running on a host with a running OneAgent,
+        setting the `export_dynatrace_metadata` option to `True` will export
+        metadata collected by the OneAgent to the Dynatrace endpoint. This
+        option will default to `True` when `endpoint_url` is not set.
+    export_interval_millis: float, Optional (default `60000`)
+        Time to wait between exports in milliseconds.
+    Returns
+    -------
+    PeriodicExportingMetricReader, configured with a Dynatrace metrics exporter
+    according to this method's parameters.
+    """
     return PeriodicExportingMetricReader(
         export_interval_millis=export_interval_millis,
         preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
