@@ -6,9 +6,9 @@ from typing import List, Union
 from parameterized import parameterized
 from opentelemetry.sdk.metrics.export import HistogramDataPoint
 
-from dynatrace.opentelemetry.metrics.export import (
+from dynatrace.opentelemetry.metrics.export._histogram_utils import (
     _get_histogram_min,
-    _get_histogram_max
+    _get_histogram_max,
 )
 
 

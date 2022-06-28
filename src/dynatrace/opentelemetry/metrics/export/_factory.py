@@ -14,7 +14,6 @@
 
 import logging
 
-import opentelemetry.sdk.metrics as metrics
 from dynatrace.metric.utils import (
     DynatraceMetricsFactory,
     MetricError
@@ -30,19 +29,10 @@ from opentelemetry.sdk.metrics.export import (
     HistogramDataPoint
 )
 
-from dynatrace.opentelemetry.metrics.export._histogram_utils import \
-    _get_histogram_min, _get_histogram_max
-
-VERSION = "0.3.0-rc1"
-
-_DYNATRACE_TEMPORALITY_PREFERENCE = {
-    metrics.Counter: AggregationTemporality.DELTA,
-    metrics.UpDownCounter: AggregationTemporality.CUMULATIVE,
-    metrics.Histogram: AggregationTemporality.DELTA,
-    metrics.ObservableCounter: AggregationTemporality.DELTA,
-    metrics.ObservableUpDownCounter: AggregationTemporality.CUMULATIVE,
-    metrics.ObservableGauge: AggregationTemporality.CUMULATIVE,
-}
+from dynatrace.opentelemetry.metrics.export._histogram_utils import (
+    _get_histogram_min,
+    _get_histogram_max
+)
 
 
 class OTelDynatraceMetricsFactory:

@@ -15,7 +15,6 @@
 import logging
 from typing import Mapping, Optional
 
-import opentelemetry.sdk.metrics as metrics
 import requests
 from dynatrace.metric.utils import (
     DynatraceMetricsSerializer,
@@ -24,24 +23,12 @@ from dynatrace.metric.utils import (
 from opentelemetry.sdk.metrics.export import (
     MetricExporter,
     MetricExportResult,
-    AggregationTemporality,
     MetricsData
 )
 
 from dynatrace.opentelemetry.metrics.export._factory import (
     OTelDynatraceMetricsFactory
 )
-
-VERSION = "0.3.0-rc1"
-
-_DYNATRACE_TEMPORALITY_PREFERENCE = {
-    metrics.Counter: AggregationTemporality.DELTA,
-    metrics.UpDownCounter: AggregationTemporality.CUMULATIVE,
-    metrics.Histogram: AggregationTemporality.DELTA,
-    metrics.ObservableCounter: AggregationTemporality.DELTA,
-    metrics.ObservableUpDownCounter: AggregationTemporality.CUMULATIVE,
-    metrics.ObservableGauge: AggregationTemporality.CUMULATIVE,
-}
 
 
 class _DynatraceMetricsExporter(MetricExporter):
