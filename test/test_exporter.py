@@ -563,7 +563,7 @@ class TestExporter(unittest.TestCase):
                     prefix="otel.python.test",
                     default_dimensions={"defaultKey": "defaultValue"}
                 ),
-                                      PeriodicExportingMetricReader)
+                    PeriodicExportingMetricReader)
                 mock_exporter.assert_called_once_with(
                     endpoint_url="endpoint.url",
                     api_token="dt.APItoken",
