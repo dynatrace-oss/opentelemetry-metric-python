@@ -27,7 +27,7 @@ from opentelemetry.sdk.metrics.export import (
 )
 
 from dynatrace.opentelemetry.metrics.export._factory import (
-    OTelDynatraceMetricsFactory
+    _OTelDynatraceMetricsFactory
 )
 
 
@@ -57,7 +57,7 @@ class _DynatraceMetricsExporter(MetricExporter):
                                "to default local OneAgent ingest endpoint.")
             self._endpoint_url = "http://localhost:14499/metrics/ingest"
 
-        self._metric_factory = OTelDynatraceMetricsFactory()
+        self._metric_factory = _OTelDynatraceMetricsFactory()
         self._serializer = DynatraceMetricsSerializer(
             self.__logger.getChild(DynatraceMetricsSerializer.__name__),
             prefix,

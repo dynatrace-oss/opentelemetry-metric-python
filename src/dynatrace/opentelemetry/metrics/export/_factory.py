@@ -35,7 +35,7 @@ from dynatrace.opentelemetry.metrics.export._histogram_utils import (
 )
 
 
-class OTelDynatraceMetricsFactory:
+class _OTelDynatraceMetricsFactory:
     """
     A class which implements the OpenTelemetry MetricsExporter interface
 
