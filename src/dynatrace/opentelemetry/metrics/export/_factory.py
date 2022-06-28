@@ -89,25 +89,6 @@ class OTelDynatraceMetricsFactory:
                 return None
             return self._to_dynatrace_gauge(metric, point)
 
-    def _histogram_to_dynatrace_metric(self, metric: Metric,
-                                       point: HistogramDataPoint):
-        # only allow AggregationTemporality.DELTA
-        if metric.data.aggregation_temporality != AggregationTemporality.DELTA:
-            self._log_temporality_mismatch(
-                "Histogram",
-                metric,
-                supported_temporality=AggregationTemporality.DELTA)
-            return None
-
-        return self._metric_factory.create_float_summary(
-            metric.name,
-            _get_histogram_min(point),
-            _get_histogram_max(point),
-            point.sum,
-            sum(point.bucket_counts),
-            dict(point.attributes),
-            int(point.time_unix_nano / 1000000))
-
     def _to_dynatrace_counter(self, metric: Metric,
                               point: NumberDataPoint):
         if isinstance(point.value, float):
@@ -137,6 +118,25 @@ class OTelDynatraceMetricsFactory:
                 point.value,
                 dict(point.attributes),
                 int(point.time_unix_nano / 1000000))
+
+    def _histogram_to_dynatrace_metric(self, metric: Metric,
+                                       point: HistogramDataPoint):
+        # only allow AggregationTemporality.DELTA
+        if metric.data.aggregation_temporality != AggregationTemporality.DELTA:
+            self._log_temporality_mismatch(
+                "Histogram",
+                metric,
+                supported_temporality=AggregationTemporality.DELTA)
+            return None
+
+        return self._metric_factory.create_float_summary(
+            metric.name,
+            _get_histogram_min(point),
+            _get_histogram_max(point),
+            point.sum,
+            sum(point.bucket_counts),
+            dict(point.attributes),
+            int(point.time_unix_nano / 1000000))
 
     def _log_temporality_mismatch(
             self,
