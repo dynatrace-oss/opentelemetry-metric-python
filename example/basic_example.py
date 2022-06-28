@@ -102,8 +102,8 @@ if __name__ == '__main__':
 
     # set up OpenTelemetry for export:
     logger.debug("setting up global OpenTelemetry configuration.")
-    # This call sets up the MeterProvider, with a
-    # PeriodicExportingMetricReader that exports every 5000 ms and the
+    # This call sets up the MeterProvider with a
+    # PeriodicExportingMetricReader that exports every 5000ms and the
     # Dynatrace exporter exporting to args.endpoint with args.token
     metrics.set_meter_provider(MeterProvider(
         metric_readers=[configure_dynatrace_exporter(
