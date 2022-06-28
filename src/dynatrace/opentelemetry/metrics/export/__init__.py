@@ -23,10 +23,6 @@ from opentelemetry.sdk.metrics.export import (
 from dynatrace.opentelemetry.metrics.export._exporter import (
     _DynatraceMetricsExporter
 )
-from dynatrace.opentelemetry.metrics.export._histogram_utils import (
-    _get_histogram_min,
-    _get_histogram_max
-)
 
 VERSION = "0.3.0-rc1"
 
