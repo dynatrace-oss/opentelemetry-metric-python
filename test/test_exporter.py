@@ -41,8 +41,11 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from parameterized import parameterized
 
-from dynatrace.opentelemetry.metrics.export import _DynatraceMetricsExporter, \
-    _DYNATRACE_TEMPORALITY_PREFERENCE, configure_dynatrace_exporter
+from dynatrace.opentelemetry.metrics.export import (
+    _DynatraceMetricsExporter,
+    _DYNATRACE_TEMPORALITY_PREFERENCE,
+    configure_dynatrace_exporter
+)
 
 
 class AnyStringMatching(str):
@@ -93,8 +96,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 "
-                 + str(self._test_timestamp_millis)
-                 + "\n",
+                 + str(self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -112,8 +114,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 "
-                 + str(self._test_timestamp_millis)
-                 + "\n",
+                 + str(self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -135,8 +136,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 "
-                 + str(self._test_timestamp_millis)
-                 + "\n",
+                 + str(self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -155,8 +155,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 "
-                 + str(self._test_timestamp_millis)
-                 + "\n",
+                 + str(self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -172,7 +171,7 @@ class TestExporter(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="{0}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {1}\n"
+            data="{0}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {1}"
                 .format(prefix, self._test_timestamp_millis),
             headers=self._headers)
 
@@ -190,8 +189,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,attribute1=tv1,attribute2=tv2,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 "
-                 + str(self._test_timestamp_millis)
-                 + "\n",
+                 + str(self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -222,8 +220,7 @@ class TestExporter(unittest.TestCase):
             data="my.instr,attribute1=tv1,attribute2=tv2,l1=v1,l2=v2,"
                  "dt_mattribute1=value1,dt_mattribute2=value2,"
                  "dt.metrics.source=opentelemetry count,delta=10 "
-                 + str(self._test_timestamp_millis)
-                 + "\n",
+                 + str(self._test_timestamp_millis),
             headers=self._headers)
 
     @parameterized.expand([
@@ -247,7 +244,7 @@ class TestExporter(unittest.TestCase):
 
             expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\n" \
                        "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
-                       "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n" \
+                       "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}" \
                 .format(self._test_timestamp_millis)
 
             exporter = _DynatraceMetricsExporter()
@@ -270,9 +267,9 @@ class TestExporter(unittest.TestCase):
 
         metrics = [self._create_sum(n) for n in range(2)]
 
-        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\n" \
+        first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}" \
             .format(self._test_timestamp_millis)
-        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
+        second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}" \
             .format(self._test_timestamp_millis)
 
         exporter = _DynatraceMetricsExporter()
@@ -303,10 +300,10 @@ class TestExporter(unittest.TestCase):
         metrics = [self._create_sum(n) for n in range(4)]
 
         first_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=0 {0}\n" \
-                         "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}\n" \
+                         "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=1 {0}" \
             .format(self._test_timestamp_millis)
         second_expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=2 {0}\n" \
-                          "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=3 {0}\n" \
+                          "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=3 {0}" \
             .format(self._test_timestamp_millis)
 
         exporter = _DynatraceMetricsExporter()
@@ -337,7 +334,7 @@ class TestExporter(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}\n"
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}"
                 .format(self._test_timestamp_millis),
             headers=self._headers)
 
@@ -382,7 +379,7 @@ class TestExporter(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}\n"
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}"
                 .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
@@ -397,7 +394,7 @@ class TestExporter(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}\n"
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}"
                 .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
@@ -419,7 +416,7 @@ class TestExporter(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=-3,max=12,sum=87,count=12 {0}\n"
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=-3,max=12,sum=87,count=12 {0}"
                 .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
@@ -457,7 +454,7 @@ class TestExporter(unittest.TestCase):
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
-            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=0,max=10,sum=87,count=12 {0}\n"
+            data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=0,max=10,sum=87,count=12 {0}"
                 .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
@@ -480,7 +477,7 @@ class TestExporter(unittest.TestCase):
 
         expected = "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}\n" \
                    "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,20 {0}\n" \
-                   "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=-3,max=12,sum=87,count=12 {0}\n" \
+                   "my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=-3,max=12,sum=87,count=12 {0}" \
             .format(int(self._test_timestamp_millis))
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
@@ -515,7 +512,7 @@ class TestExporter(unittest.TestCase):
             self._ingest_endpoint,
             data=AnyStringMatching(
                 r"my\.renamed\.instr,(l2=v2,l1=v1|l1=v1,l2=v2),"
-                r"dt\.metrics\.source=opentelemetry count,delta=10 [0-9]*\n"),
+                r"dt\.metrics\.source=opentelemetry count,delta=10 [0-9]*"),
             headers=self._headers)
 
         counter.add(10, attributes={"l1": "v1", "l2": "v2"})
