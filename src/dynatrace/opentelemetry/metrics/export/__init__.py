@@ -62,7 +62,7 @@ def configure_dynatrace_export(
         (default: no API token).
     prefix: str, Optional
         Will be prepended to each metric key, separated by a dot
-        (`<prefix>.<namespace>.<name>`).
+        (`<prefix>.<name>`).
         (default: no prefix)
     default_dimensions: Mapping[str, str], Optional
         Static dimensions to add to every metric. Dimension keys need

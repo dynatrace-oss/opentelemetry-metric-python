@@ -89,7 +89,7 @@ The permission required for sending metrics is `Ingest metrics` (`metrics.ingest
 
 #### Metric Key Prefix
 
-The `prefix` parameter specifies an optional prefix, which is prepended to each metric key, separated by a dot (`<prefix>.<namespace>.<name>`).
+The `prefix` parameter specifies an optional prefix, which is prepended to each metric key, separated by a dot (`<prefix>.<name>`).
 
 #### Default Dimensions
 
