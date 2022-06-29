@@ -44,7 +44,7 @@ from parameterized import parameterized
 from dynatrace.opentelemetry.metrics.export import (
     _DynatraceMetricsExporter,
     _DYNATRACE_TEMPORALITY_PREFERENCE,
-    configure_dynatrace_export
+    configure_dynatrace_metrics_export
 )
 
 
@@ -527,7 +527,7 @@ class TestExporter(unittest.TestCase):
                               "__init__") as mock_exporter:
                 mock_reader.return_value = None
                 mock_exporter.return_value = None
-                self.assertIsInstance(configure_dynatrace_export(),
+                self.assertIsInstance(configure_dynatrace_metrics_export(),
                                       PeriodicExportingMetricReader)
                 mock_exporter.assert_called_once_with(
                     endpoint_url=None,
@@ -552,7 +552,7 @@ class TestExporter(unittest.TestCase):
                               "__init__") as mock_exporter:
                 mock_reader.return_value = None
                 mock_exporter.return_value = None
-                self.assertIsInstance(configure_dynatrace_export(
+                self.assertIsInstance(configure_dynatrace_metrics_export(
                     endpoint_url="endpoint.url",
                     export_dynatrace_metadata=True,
                     export_interval_millis=100,

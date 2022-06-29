@@ -37,7 +37,7 @@ _DYNATRACE_TEMPORALITY_PREFERENCE = {
 }
 
 
-def configure_dynatrace_export(
+def configure_dynatrace_metrics_export(
         endpoint_url: Optional[str] = None,
         api_token: Optional[str] = None,
         prefix: Optional[str] = None,

@@ -28,7 +28,7 @@ The general setup of OpenTelemetry Python is explained in the official [Getting 
 metrics.set_meter_provider(MeterProvider(
         # configure Exporter/MetricReader combination with a 5000ms export
         # interval, endpoint url and API token.
-        metric_readers=[configure_dynatrace_exporter(
+        metric_readers=[configure_dynatrace_metrics_export(
             export_interval_millis=5000,
             endpoint_url=endpoint_url,
             api_token=api_token)
