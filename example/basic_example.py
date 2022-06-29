@@ -24,7 +24,7 @@ import psutil
 from opentelemetry.metrics import Observation, CallbackOptions
 from opentelemetry.sdk.metrics import MeterProvider
 
-from dynatrace.opentelemetry.metrics.export import configure_dynatrace_exporter
+from dynatrace.opentelemetry.metrics.export import configure_dynatrace_export
 
 cpu_gauge = None
 ram_gauge = None
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     # PeriodicExportingMetricReader that exports every 5000ms and the
     # Dynatrace exporter exporting to args.endpoint with args.token
     metrics.set_meter_provider(MeterProvider(
-        metric_readers=[configure_dynatrace_exporter(
+        metric_readers=[configure_dynatrace_export(
             export_interval_millis=5000,
             endpoint_url=args.endpoint,
             api_token=args.token,

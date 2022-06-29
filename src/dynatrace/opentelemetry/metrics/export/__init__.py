@@ -17,7 +17,8 @@ from typing import Mapping, Optional
 import opentelemetry.sdk.metrics as metrics
 from opentelemetry.sdk.metrics.export import (
     AggregationTemporality,
-    PeriodicExportingMetricReader
+    PeriodicExportingMetricReader,
+    MetricReader
 )
 
 from dynatrace.opentelemetry.metrics.export._exporter import (
@@ -36,14 +37,14 @@ _DYNATRACE_TEMPORALITY_PREFERENCE = {
 }
 
 
-def configure_dynatrace_exporter(
+def configure_dynatrace_export(
         endpoint_url: Optional[str] = None,
         api_token: Optional[str] = None,
         prefix: Optional[str] = None,
         default_dimensions: Optional[Mapping[str, str]] = None,
         export_dynatrace_metadata: Optional[bool] = False,
         export_interval_millis: Optional[float] = None
-):
+) -> MetricReader:
     """
     Configures and creates a PeriodicExportingMetricReader and
     DynatraceMetricsExporter combination.
