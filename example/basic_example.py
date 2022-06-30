@@ -19,28 +19,30 @@ import random
 import time
 from os.path import splitext, basename
 
+import opentelemetry.metrics as metrics
 import psutil
-from opentelemetry import _metrics
-from opentelemetry.sdk._metrics import MeterProvider
-from opentelemetry.sdk._metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk._metrics.measurement import Measurement
+from opentelemetry.metrics import Observation, CallbackOptions
+from opentelemetry.sdk.metrics import MeterProvider
 
-from dynatrace.opentelemetry.metrics.export import DynatraceMetricsExporter
+from dynatrace.opentelemetry.metrics.export import (
+    configure_dynatrace_metrics_export
+)
 
 cpu_gauge = None
 ram_gauge = None
 
+
 # Callback to gather cpu usage
-def get_cpu_usage_callback():
+def get_cpu_usage_callback(_: CallbackOptions):
     for (number, percent) in enumerate(psutil.cpu_percent(percpu=True)):
         attributes = {"cpu_number": str(number)}
-        yield Measurement(percent, cpu_gauge, attributes)
+        yield Observation(percent, attributes)
 
 
 # Callback to gather RAM memory usage
-def get_ram_usage_callback():
+def get_ram_usage_callback(_: CallbackOptions):
     ram_percent = psutil.virtual_memory().percent
-    yield Measurement(ram_percent, ram_gauge)
+    yield Observation(ram_percent)
 
 
 def parse_arguments():
@@ -101,18 +103,21 @@ if __name__ == '__main__':
             "OneAgent endpoint.")
 
     # set up OpenTelemetry for export:
-    # This call sets up the MeterProvider, with a PeriodicExportingMetricReader that exports every 5000 ms
-    # and the Dynatrace exporter exporting to args.endpoint with args.token
     logger.debug("setting up global OpenTelemetry configuration.")
-    _metrics.set_meter_provider(MeterProvider(
-        metric_readers=[PeriodicExportingMetricReader(
+    # This call sets up the MeterProvider with a
+    # PeriodicExportingMetricReader that exports every 5000ms and the
+    # Dynatrace exporter exporting to args.endpoint with args.token
+    metrics.set_meter_provider(MeterProvider(
+        metric_readers=[configure_dynatrace_metrics_export(
             export_interval_millis=5000,
-            exporter=DynatraceMetricsExporter(args.endpoint, args.token,
-                                              prefix="otel.python",
-                                              export_dynatrace_metadata=args.metadata_enrichment,
-                                              default_dimensions={"default1": "defval1"}))]))
+            endpoint_url=args.endpoint,
+            api_token=args.token,
+            prefix="otel.python",
+            export_dynatrace_metadata=args.metadata_enrichment,
+            default_dimensions={"default1": "defval1"})
+        ]))
 
-    meter = _metrics.get_meter(script_name)
+    meter = metrics.get_meter(script_name)
 
     logger.info("creating instruments to record metrics data")
     requests_counter = meter.create_counter(
@@ -149,15 +154,15 @@ if __name__ == '__main__':
     testing_attributes = {"environment": "testing"}
 
     logger.info("starting instrumented application...")
-    try:
-        while True:
-            # Update the metric instruments using the direct calling convention
-            requests_counter.add(random.randint(0, 25), staging_attributes)
-            requests_size.record(random.randint(0, 300), staging_attributes)
+try:
+    while True:
+        # Update the metric instruments using the direct calling convention
+        requests_counter.add(random.randint(0, 25), staging_attributes)
+        requests_size.record(random.randint(0, 300), staging_attributes)
 
-            requests_counter.add(random.randint(0, 35), testing_attributes)
-            requests_size.record(random.randint(0, 100), testing_attributes)
-            time.sleep(5)
+        requests_counter.add(random.randint(0, 35), testing_attributes)
+        requests_size.record(random.randint(0, 100), testing_attributes)
+        time.sleep(5)
 
-    except KeyboardInterrupt:
-        logger.info("shutting down...")
+except KeyboardInterrupt:
+    logger.info("shutting down...")

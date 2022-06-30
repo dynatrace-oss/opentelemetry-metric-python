@@ -1,29 +1,30 @@
 import math
 import unittest
 
-from typing import List
+from typing import List, Union
 
 from parameterized import parameterized
-from opentelemetry.sdk._metrics.point import Histogram, \
-    AggregationTemporality, \
-    Union
+from opentelemetry.sdk.metrics.export import HistogramDataPoint
 
-from dynatrace.opentelemetry.metrics.export import _get_histogram_min, \
-    _get_histogram_max
+from dynatrace.opentelemetry.metrics.export._histogram_utils import (
+    _get_histogram_min,
+    _get_histogram_max,
+)
 
 
 def create_histogram(explicit_bounds: List[int], bucket_counts: List[int],
-                     sum: Union[float, int]):
+                     histogram_sum: Union[float, int]):
     start_time = 1619687639000000000
     end_time = 1619687639000000000
-    return Histogram(bucket_counts=bucket_counts,
-                     explicit_bounds=explicit_bounds,
-                     sum=sum,
-                     min=+math.inf,
-                     max=-math.inf,
-                     aggregation_temporality=AggregationTemporality.DELTA,
-                     time_unix_nano=end_time,
-                     start_time_unix_nano=start_time)
+    return HistogramDataPoint(bucket_counts=bucket_counts,
+                              explicit_bounds=explicit_bounds,
+                              sum=histogram_sum,
+                              min=+math.inf,
+                              max=-math.inf,
+                              time_unix_nano=end_time,
+                              start_time_unix_nano=start_time,
+                              attributes=dict(),
+                              count=sum(bucket_counts))
 
 
 class TestMin(unittest.TestCase):

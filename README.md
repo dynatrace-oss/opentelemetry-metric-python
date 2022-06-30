@@ -1,8 +1,12 @@
 # Dynatrace OpenTelemetry Metrics Exporter for Python
 
-> This exporter is based on the OpenTelemetry Metrics SDK for Python, which is currently in an alpha state and neither considered stable nor complete as of this writing.
-> As such, this exporter is not intended for production use until the underlying OpenTelemetry Metrics API and SDK are stable.
-> See [open-telemetry/opentelemetry-python](https://github.com/open-telemetry/opentelemetry-python) for the current state of the OpenTelemetry SDK for Python.
+This exporter allows exporting metrics created using the [OpenTelemetry SDK for Python](https://github.com/open-telemetry/opentelemetry-python)
+directly to [Dynatrace](https://www.dynatrace.com).
+
+It was built against OpenTelemetry SDK version `1.12-rc1` and should work with any `1.12+` version.
+
+More information on exporting OpenTelemetry metrics to Dynatrace can be found in the
+[Dynatrace documentation](https://www.dynatrace.com/support/help/shortlink/opentelemetry-metrics).
 
 ## Getting started
 
@@ -16,20 +20,22 @@ pip install opentelemetry-exporter-dynatrace-metrics
 
 ### Usage
 
-The general setup of OpenTelemetry Python is explained in the official [Getting Started Guide](https://opentelemetry-python.readthedocs.io/en/stable/getting-started.html).
+The general setup of OpenTelemetry Python is explained in the official [Getting Started Guide](https://open-telemetry.github.io/opentelemetry-python/getting-started.html#add-metrics).
 
 ```python
-# configure API endpoint and authentication token
-exporter = DynatraceMetricsExporter(endpoint_url, api_token)
 
 # setup metrics export pipeline
-_metrics.set_meter_provider(MeterProvider(
-        metric_readers=[PeriodicExportingMetricReader(
+metrics.set_meter_provider(MeterProvider(
+        # configure Exporter/MetricReader combination with a 5000ms export
+        # interval, endpoint url and API token.
+        metric_readers=[configure_dynatrace_metrics_export(
             export_interval_millis=5000,
-            exporter=exporter)]))
+            endpoint_url=endpoint_url,
+            api_token=api_token)
+        ]))
 
 # get a meter
-meter = _metrics.get_meter(__name__)
+meter = metrics.get_meter(__name__)
 
 # create a counter instrument and provide the first data point
 counter = meter.create_counter(
@@ -39,7 +45,7 @@ counter = meter.create_counter(
     value_type=int
 )
 
-counter.add(25, {"dimension-1", "value-1"})
+counter.add(25, {"dimension-1": "value-1"})
 ```
 
 ### Example
@@ -83,7 +89,7 @@ The permission required for sending metrics is `Ingest metrics` (`metrics.ingest
 
 #### Metric Key Prefix
 
-The `prefix` parameter specifies an optional prefix, which is prepended to each metric key, separated by a dot (`<prefix>.<namespace>.<name>`).
+The `prefix` parameter specifies an optional prefix, which is prepended to each metric key, separated by a dot (`<prefix>.<name>`).
 
 #### Default Dimensions
 
@@ -100,8 +106,8 @@ More information on the underlying Dynatrace metadata feature that is used by th
 
 ##### Dimensions precedence
 
-When specifying default dimensions, labels and Dynatrace metadata enrichment, the precedence of dimensions with the same key is as follows:
-Default dimensions are overwritten by labels passed to instruments, which in turn are overwritten by the Dynatrace metadata dimensions (even though the likeliness of a collision here is very low, since the Dynatrace metadata only contains [Dynatrace reserved dimensions](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol/#syntax) starting with `dt.*`).
+When specifying default dimensions, attributes and Dynatrace metadata enrichment, the precedence of dimensions with the same key is as follows:
+Default dimensions are overwritten by attributes passed to instruments, which in turn are overwritten by the Dynatrace metadata dimensions (even though the likeliness of a collision here is very low, since the Dynatrace metadata only contains [Dynatrace reserved dimensions](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol/#syntax) starting with `dt.*`).
 
 ## Development
 
