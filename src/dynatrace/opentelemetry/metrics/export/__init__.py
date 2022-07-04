@@ -25,7 +25,7 @@ from dynatrace.opentelemetry.metrics.export._exporter import (
     _DynatraceMetricsExporter
 )
 
-VERSION = "0.3.0-rc1"
+VERSION = "0.3.0-rc2"
 
 _DYNATRACE_TEMPORALITY_PREFERENCE = {
     metrics.Counter: AggregationTemporality.DELTA,
