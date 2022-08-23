@@ -56,7 +56,8 @@ class _DynatraceMetricsExporter(MetricExporter):
                 type, Aggregation
             ] = None,
     ):
-        super().__init__(preferred_temporality=preferred_temporality, preferred_aggregation=preferred_aggregation)
+        super().__init__(preferred_temporality=preferred_temporality,
+                         preferred_aggregation=preferred_aggregation)
         self.__logger = logging.getLogger(__name__)
 
         if endpoint_url:
