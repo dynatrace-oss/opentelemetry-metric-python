@@ -27,7 +27,7 @@ from dynatrace.opentelemetry.metrics.export._constants import (
     _DYNATRACE_TEMPORALITY_PREFERENCE,
 )
 
-VERSION = "0.3.0-rc2"
+VERSION = "0.3.0"
 
 
 def configure_dynatrace_metrics_export(
