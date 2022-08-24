@@ -490,11 +490,12 @@ class TestExporter(unittest.TestCase):
     def test_view(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
-        exporter = _DynatraceMetricsExporter()
+        exporter = _DynatraceMetricsExporter(
+            preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
+        )
 
         metric_reader = PeriodicExportingMetricReader(
             export_interval_millis=3600000,
-            preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
             # 1h so that the test can finish before the collection event fires.
             exporter=exporter)
 
@@ -534,11 +535,11 @@ class TestExporter(unittest.TestCase):
                     api_token=None,
                     prefix=None,
                     default_dimensions=None,
-                    export_dynatrace_metadata=False
+                    export_dynatrace_metadata=False,
+                    preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                 )
                 mock_reader.assert_called_once_with(
                     export_interval_millis=None,
-                    preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                     exporter=mock.ANY,
                 )
                 _, kwargs = mock_reader.call_args
@@ -566,11 +567,11 @@ class TestExporter(unittest.TestCase):
                     api_token="dt.APItoken",
                     prefix="otel.python.test",
                     default_dimensions={"defaultKey": "defaultValue"},
-                    export_dynatrace_metadata=True
+                    export_dynatrace_metadata=True,
+                    preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                 )
                 mock_reader.assert_called_once_with(
                     export_interval_millis=100,
-                    preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                     exporter=mock.ANY,
                 )
                 _, kwargs = mock_reader.call_args

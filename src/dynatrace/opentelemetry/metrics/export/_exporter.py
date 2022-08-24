@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Mapping, Optional
+from typing import Mapping, Optional, Dict
 
 import requests
 from dynatrace.metric.utils import (
@@ -25,6 +25,10 @@ from opentelemetry.sdk.metrics.export import (
     MetricExportResult,
     MetricsData
 )
+from opentelemetry.sdk.metrics._internal.aggregation import (
+    AggregationTemporality,
+)
+from opentelemetry.sdk.metrics.view import Aggregation
 
 from dynatrace.opentelemetry.metrics.export._factory import (
     _OTelDynatraceMetricsFactory
@@ -47,7 +51,13 @@ class _DynatraceMetricsExporter(MetricExporter):
             prefix: Optional[str] = None,
             default_dimensions: Optional[Mapping[str, str]] = None,
             export_dynatrace_metadata: Optional[bool] = False,
+            preferred_temporality: Dict[type, AggregationTemporality] = None,
+            preferred_aggregation: Dict[
+                type, Aggregation
+            ] = None,
     ):
+        super().__init__(preferred_temporality=preferred_temporality,
+                         preferred_aggregation=preferred_aggregation)
         self.__logger = logging.getLogger(__name__)
 
         if endpoint_url:
@@ -122,6 +132,10 @@ class _DynatraceMetricsExporter(MetricExporter):
                 "Failed to export metrics: %s", ex)
             return MetricExportResult.FAILURE
         return MetricExportResult.SUCCESS
+
+    def force_flush(self, timeout_millis: float = 10_000) -> bool:
+        # nothing to do.
+        pass
 
     def shutdown(self, timeout_millis: float = 30_000, **kwargs) -> None:
         # nothing to do.

@@ -85,12 +85,12 @@ def configure_dynatrace_metrics_export(
     """
     return PeriodicExportingMetricReader(
         export_interval_millis=export_interval_millis,
-        preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
         exporter=_DynatraceMetricsExporter(
             endpoint_url=endpoint_url,
             api_token=api_token,
             prefix=prefix,
             default_dimensions=default_dimensions,
-            export_dynatrace_metadata=export_dynatrace_metadata
+            export_dynatrace_metadata=export_dynatrace_metadata,
+            preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
         )
     )
