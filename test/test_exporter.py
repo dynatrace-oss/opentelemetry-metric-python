@@ -43,8 +43,8 @@ from parameterized import parameterized
 
 from dynatrace.opentelemetry.metrics.export import (
     _DynatraceMetricsExporter,
+    configure_dynatrace_metrics_export,
     _DYNATRACE_TEMPORALITY_PREFERENCE,
-    configure_dynatrace_metrics_export
 )
 
 
@@ -490,9 +490,7 @@ class TestExporter(unittest.TestCase):
     def test_view(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
-        exporter = _DynatraceMetricsExporter(
-            preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
-        )
+        exporter = _DynatraceMetricsExporter()
 
         metric_reader = PeriodicExportingMetricReader(
             export_interval_millis=3600000,

@@ -16,6 +16,7 @@ import logging
 from typing import Mapping, Optional, Dict
 
 import requests
+
 from dynatrace.metric.utils import (
     DynatraceMetricsSerializer,
     MetricError, DynatraceMetricsApiConstants
@@ -30,8 +31,12 @@ from opentelemetry.sdk.metrics._internal.aggregation import (
 )
 from opentelemetry.sdk.metrics.view import Aggregation
 
+from dynatrace.opentelemetry.metrics.export._constants import (
+    _DYNATRACE_TEMPORALITY_PREFERENCE,
+)
+
 from dynatrace.opentelemetry.metrics.export._factory import (
-    _OTelDynatraceMetricsFactory
+    _OTelDynatraceMetricsFactory,
 )
 
 
@@ -45,17 +50,18 @@ class _DynatraceMetricsExporter(MetricExporter):
     """
 
     def __init__(
-            self,
-            endpoint_url: Optional[str] = None,
-            api_token: Optional[str] = None,
-            prefix: Optional[str] = None,
-            default_dimensions: Optional[Mapping[str, str]] = None,
-            export_dynatrace_metadata: Optional[bool] = False,
-            preferred_temporality: Dict[type, AggregationTemporality] = None,
-            preferred_aggregation: Dict[
-                type, Aggregation
-            ] = None,
+        self,
+        endpoint_url: Optional[str] = None,
+        api_token: Optional[str] = None,
+        prefix: Optional[str] = None,
+        default_dimensions: Optional[Mapping[str, str]] = None,
+        export_dynatrace_metadata: Optional[bool] = False,
+        preferred_temporality: Dict[type, AggregationTemporality] = None,
+        preferred_aggregation: Dict[type, Aggregation] = None,
     ):
+        if preferred_temporality is None:
+            preferred_temporality = _DYNATRACE_TEMPORALITY_PREFERENCE
+
         super().__init__(preferred_temporality=preferred_temporality,
                          preferred_aggregation=preferred_aggregation)
         self.__logger = logging.getLogger(__name__)
