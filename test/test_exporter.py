@@ -11,18 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import math
 import re
 import unittest
-from unittest import mock
-
-import requests
-
 from typing import Sequence, Union
+from unittest import mock
 from unittest.mock import patch
 
+import requests
+from dynatrace.opentelemetry.metrics.export import (
+    _DynatraceMetricsExporter,
+    configure_dynatrace_metrics_export,
+)
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.view import View
 from opentelemetry.sdk.metrics.export import (
     Metric,
     MetricExportResult,
@@ -35,17 +37,12 @@ from opentelemetry.sdk.metrics.export import (
     DataT,
     ResourceMetrics,
     ScopeMetrics,
-    HistogramDataPoint
+    HistogramDataPoint,
 )
+from opentelemetry.sdk.metrics.view import View
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from parameterized import parameterized
-
-from dynatrace.opentelemetry.metrics.export import (
-    _DynatraceMetricsExporter,
-    _DYNATRACE_TEMPORALITY_PREFERENCE,
-    configure_dynatrace_metrics_export
-)
 
 
 class AnyStringMatching(str):
@@ -490,9 +487,7 @@ class TestExporter(unittest.TestCase):
     def test_view(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
-        exporter = _DynatraceMetricsExporter(
-            preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
-        )
+        exporter = _DynatraceMetricsExporter()
 
         metric_reader = PeriodicExportingMetricReader(
             export_interval_millis=3600000,
@@ -536,7 +531,6 @@ class TestExporter(unittest.TestCase):
                     prefix=None,
                     default_dimensions=None,
                     export_dynatrace_metadata=False,
-                    preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                 )
                 mock_reader.assert_called_once_with(
                     export_interval_millis=None,
@@ -568,7 +562,6 @@ class TestExporter(unittest.TestCase):
                     prefix="otel.python.test",
                     default_dimensions={"defaultKey": "defaultValue"},
                     export_dynatrace_metadata=True,
-                    preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
                 )
                 mock_reader.assert_called_once_with(
                     export_interval_millis=100,

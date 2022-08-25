@@ -13,26 +13,36 @@
 # limitations under the License.
 
 import logging
-from typing import Mapping, Optional, Dict
+from typing import Mapping, Optional
 
 import requests
 from dynatrace.metric.utils import (
     DynatraceMetricsSerializer,
-    MetricError, DynatraceMetricsApiConstants
+    MetricError,
+    DynatraceMetricsApiConstants,
+)
+from dynatrace.opentelemetry.metrics.export._factory import (
+    _OTelDynatraceMetricsFactory,
 )
 from opentelemetry.sdk.metrics.export import (
     MetricExporter,
     MetricExportResult,
-    MetricsData
+    MetricsData,
 )
-from opentelemetry.sdk.metrics._internal.aggregation import (
+
+import opentelemetry.sdk.metrics as metrics
+from opentelemetry.sdk.metrics.export import (
     AggregationTemporality,
 )
-from opentelemetry.sdk.metrics.view import Aggregation
 
-from dynatrace.opentelemetry.metrics.export._factory import (
-    _OTelDynatraceMetricsFactory
-)
+_DYNATRACE_TEMPORALITY_PREFERENCE = {
+    metrics.Counter: AggregationTemporality.DELTA,
+    metrics.UpDownCounter: AggregationTemporality.CUMULATIVE,
+    metrics.Histogram: AggregationTemporality.DELTA,
+    metrics.ObservableCounter: AggregationTemporality.DELTA,
+    metrics.ObservableUpDownCounter: AggregationTemporality.CUMULATIVE,
+    metrics.ObservableGauge: AggregationTemporality.CUMULATIVE,
+}
 
 
 class _DynatraceMetricsExporter(MetricExporter):
@@ -45,19 +55,17 @@ class _DynatraceMetricsExporter(MetricExporter):
     """
 
     def __init__(
-            self,
-            endpoint_url: Optional[str] = None,
-            api_token: Optional[str] = None,
-            prefix: Optional[str] = None,
-            default_dimensions: Optional[Mapping[str, str]] = None,
-            export_dynatrace_metadata: Optional[bool] = False,
-            preferred_temporality: Dict[type, AggregationTemporality] = None,
-            preferred_aggregation: Dict[
-                type, Aggregation
-            ] = None,
+        self,
+        endpoint_url: Optional[str] = None,
+        api_token: Optional[str] = None,
+        prefix: Optional[str] = None,
+        default_dimensions: Optional[Mapping[str, str]] = None,
+        export_dynatrace_metadata: Optional[bool] = False,
     ):
-        super().__init__(preferred_temporality=preferred_temporality,
-                         preferred_aggregation=preferred_aggregation)
+        super().__init__(
+            preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
+            preferred_aggregation=None
+        )
         self.__logger = logging.getLogger(__name__)
 
         if endpoint_url:
