@@ -14,17 +14,12 @@
 
 from typing import Mapping, Optional
 
-from opentelemetry.sdk.metrics.export import (
-    PeriodicExportingMetricReader,
-    MetricReader
-)
-
 from dynatrace.opentelemetry.metrics.export._exporter import (
     _DynatraceMetricsExporter,
 )
-
-from dynatrace.opentelemetry.metrics.export._constants import (
-    _DYNATRACE_TEMPORALITY_PREFERENCE,
+from opentelemetry.sdk.metrics.export import (
+    PeriodicExportingMetricReader,
+    MetricReader,
 )
 
 VERSION = "0.3.0"
@@ -84,6 +79,5 @@ def configure_dynatrace_metrics_export(
             prefix=prefix,
             default_dimensions=default_dimensions,
             export_dynatrace_metadata=export_dynatrace_metadata,
-            preferred_temporality=_DYNATRACE_TEMPORALITY_PREFERENCE,
         )
     )
