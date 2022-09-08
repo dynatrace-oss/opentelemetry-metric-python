@@ -22,7 +22,7 @@ from opentelemetry.sdk.metrics.export import (
     MetricReader,
 )
 
-VERSION = "0.3.0"
+VERSION = "1.0.0"
 
 
 def configure_dynatrace_metrics_export(
