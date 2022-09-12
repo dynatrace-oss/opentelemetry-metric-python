@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+from typing import Optional, Mapping
 
 from dynatrace.metric.utils import (
     DynatraceMetricsFactory,
@@ -45,7 +46,7 @@ class _OTelDynatraceMetricsFactory:
     """
 
     def __init__(
-            self,
+        self,
     ):
         self.__logger = logging.getLogger(__name__)
         self._metric_factory = DynatraceMetricsFactory()
@@ -95,13 +96,13 @@ class _OTelDynatraceMetricsFactory:
             return self._metric_factory.create_float_counter_delta(
                 metric.name,
                 point.value,
-                dict(point.attributes),
+                self._retain_string_valued_dimensions(point.attributes),
                 int(point.time_unix_nano / 1000000))
         if isinstance(point.value, int):
             return self._metric_factory.create_int_counter_delta(
                 metric.name,
                 point.value,
-                dict(point.attributes),
+                self._retain_string_valued_dimensions(point.attributes),
                 int(point.time_unix_nano / 1000000))
 
     def _to_dynatrace_gauge(self, metric: Metric,
@@ -110,13 +111,13 @@ class _OTelDynatraceMetricsFactory:
             return self._metric_factory.create_float_gauge(
                 metric.name,
                 point.value,
-                dict(point.attributes),
+                self._retain_string_valued_dimensions(point.attributes),
                 int(point.time_unix_nano / 1000000))
         if isinstance(point.value, int):
             return self._metric_factory.create_int_gauge(
                 metric.name,
                 point.value,
-                dict(point.attributes),
+                self._retain_string_valued_dimensions(point.attributes),
                 int(point.time_unix_nano / 1000000))
 
     def _histogram_to_dynatrace_metric(self, metric: Metric,
@@ -135,7 +136,7 @@ class _OTelDynatraceMetricsFactory:
             _get_histogram_max(point),
             point.sum,
             sum(point.bucket_counts),
-            dict(point.attributes),
+            self._retain_string_valued_dimensions(point.attributes),
             int(point.time_unix_nano / 1000000))
 
     def _log_temporality_mismatch(
@@ -152,3 +153,23 @@ class _OTelDynatraceMetricsFactory:
                               metric.name,
                               metric.data.aggregation_temporality.name,
                               supported_temporality.name)
+
+    def _retain_string_valued_dimensions(
+            self,
+            attributes: Optional[Mapping]) -> Optional[Mapping[str, str]]:
+
+        if not attributes:
+            return attributes
+
+        return dict(
+            filter(lambda attr: self._is_string_value(attr[1]),
+                   attributes.items()))
+
+    def _is_string_value(self, value):
+        if isinstance(value, str):
+            return True
+
+        self.__logger.warning(
+            "Skipping unsupported dimension with value type %s",
+            type(value))
+        return False
