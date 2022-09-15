@@ -96,13 +96,13 @@ class _OTelDynatraceMetricsFactory:
             return self._metric_factory.create_float_counter_delta(
                 metric.name,
                 point.value,
-                self._retain_string_valued_dimensions(point.attributes),
+                self._filter_dimensions(point.attributes),
                 int(point.time_unix_nano / 1000000))
         if isinstance(point.value, int):
             return self._metric_factory.create_int_counter_delta(
                 metric.name,
                 point.value,
-                self._retain_string_valued_dimensions(point.attributes),
+                self._filter_dimensions(point.attributes),
                 int(point.time_unix_nano / 1000000))
 
     def _to_dynatrace_gauge(self, metric: Metric,
@@ -111,13 +111,13 @@ class _OTelDynatraceMetricsFactory:
             return self._metric_factory.create_float_gauge(
                 metric.name,
                 point.value,
-                self._retain_string_valued_dimensions(point.attributes),
+                self._filter_dimensions(point.attributes),
                 int(point.time_unix_nano / 1000000))
         if isinstance(point.value, int):
             return self._metric_factory.create_int_gauge(
                 metric.name,
                 point.value,
-                self._retain_string_valued_dimensions(point.attributes),
+                self._filter_dimensions(point.attributes),
                 int(point.time_unix_nano / 1000000))
 
     def _histogram_to_dynatrace_metric(self, metric: Metric,
@@ -136,7 +136,7 @@ class _OTelDynatraceMetricsFactory:
             _get_histogram_max(point),
             point.sum,
             sum(point.bucket_counts),
-            self._retain_string_valued_dimensions(point.attributes),
+            self._filter_dimensions(point.attributes),
             int(point.time_unix_nano / 1000000))
 
     def _log_temporality_mismatch(
@@ -154,7 +154,7 @@ class _OTelDynatraceMetricsFactory:
                               metric.data.aggregation_temporality.name,
                               supported_temporality.name)
 
-    def _retain_string_valued_dimensions(
+    def _filter_dimensions(
             self,
             attributes: Optional[Mapping]) -> Optional[Mapping[str, str]]:
 

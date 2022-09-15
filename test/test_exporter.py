@@ -169,7 +169,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="{0}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {1}"
-                .format(prefix, self._test_timestamp_millis),
+            .format(prefix, self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -193,7 +193,7 @@ class TestExporter(unittest.TestCase):
     @patch('dynatrace.metric.utils._dynatrace_metadata_enricher'
            '.DynatraceMetadataEnricher._get_metadata_file_content')
     def test_dynatrace_metadata_enrichment_with_default_attributes(
-            self, mock_enricher, mock_post):
+        self, mock_enricher, mock_post):
         mock_post.return_value = self._get_session_response()
 
         # attributes coming from the Dynatrace metadata enricher
@@ -332,7 +332,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}"
-                .format(self._test_timestamp_millis),
+            .format(self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -377,7 +377,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}"
-                .format(str(int(self._test_timestamp_nanos / 1000000))),
+            .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -392,7 +392,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}"
-                .format(str(int(self._test_timestamp_nanos / 1000000))),
+            .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -414,7 +414,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=-3,max=12,sum=87,count=12 {0}"
-                .format(str(int(self._test_timestamp_nanos / 1000000))),
+            .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -452,7 +452,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=0,max=10,sum=87,count=12 {0}"
-                .format(str(int(self._test_timestamp_nanos / 1000000))),
+            .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -572,7 +572,7 @@ class TestExporter(unittest.TestCase):
                                       _DynatraceMetricsExporter)
 
     @patch.object(requests.Session, 'post')
-    def test_nonstring_attributes_dropped(self, mock_post):
+    def test_invalid_attribute_value(self, mock_post):
         mock_post.return_value = self._get_session_response()
 
         attributes = {
@@ -589,12 +589,36 @@ class TestExporter(unittest.TestCase):
 
         data = [
             self._create_gauge(value=20, attributes=attributes),
+            self._create_gauge(value=1.23, attributes=attributes),
+            self._create_sum(value=10, attributes=attributes, monotonic=False,
+                             aggregation_temporality=AggregationTemporality.CUMULATIVE),
+            self._create_sum(value=1.2, attributes=attributes, monotonic=False,
+                             aggregation_temporality=AggregationTemporality.CUMULATIVE),
+            self._create_sum(value=10, attributes=attributes, monotonic=True,
+                             aggregation_temporality=AggregationTemporality.DELTA),
+            self._create_sum(value=2.3, attributes=attributes, monotonic=True,
+                             aggregation_temporality=AggregationTemporality.DELTA),
+            self._create_histogram(
+                bucket_counts=[1, 2, 4, 5],
+                explicit_bounds=[0, 5, 10],
+                histogram_sum=87,
+                histogram_min=-3,
+                histogram_max=12,
+                attributes=attributes
+            )
         ]
+
+        expected = "my.instr,string=value,dt.metrics.source=opentelemetry gauge,20 {0}\n" \
+                   "my.instr,string=value,dt.metrics.source=opentelemetry gauge,1.23 {0}\n" \
+                   "my.instr,string=value,dt.metrics.source=opentelemetry gauge,10 {0}\n" \
+                   "my.instr,string=value,dt.metrics.source=opentelemetry gauge,1.2 {0}\n" \
+                   "my.instr,string=value,dt.metrics.source=opentelemetry count,delta=10 {0}\n" \
+                   "my.instr,string=value,dt.metrics.source=opentelemetry count,delta=2.3 {0}\n" \
+                   "my.instr,string=value,dt.metrics.source=opentelemetry gauge,min=-3,max=12,sum=87,count=12 {0}" \
+            .format(int(self._test_timestamp_millis))
+
         exporter = _DynatraceMetricsExporter()
         result = exporter.export(self._metrics_data_from_data(data))
-
-        expected = "my.instr,string=value,dt.metrics.source=opentelemetry gauge,20 {0}" \
-            .format(int(self._test_timestamp_millis))
 
         self.assertEqual(MetricExportResult.SUCCESS, result)
         mock_post.assert_called_once_with(
@@ -632,8 +656,12 @@ class TestExporter(unittest.TestCase):
             data=data
         )
 
-    def _create_sum(self, value: int, monotonic=True,
-                    aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA) -> Sum:
+    def _create_sum(self, value: Union[int, float], monotonic=True,
+                    aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA,
+                    attributes: dict = None) -> Sum:
+        if not attributes:
+            attributes = self._attributes
+
         return Sum(
             is_monotonic=monotonic,
             aggregation_temporality=aggregation_temporality,
@@ -642,11 +670,12 @@ class TestExporter(unittest.TestCase):
                     start_time_unix_nano=self._test_timestamp_nanos,
                     time_unix_nano=self._test_timestamp_nanos,
                     value=value,
-                    attributes=self._attributes
+                    attributes=attributes
                 )
             ])
 
-    def _create_gauge(self, value: int, attributes: dict = None) -> Gauge:
+    def _create_gauge(self, value: Union[int, float],
+                      attributes: dict = None) -> Gauge:
         if not attributes:
             attributes = self._attributes
         return Gauge(
@@ -665,11 +694,14 @@ class TestExporter(unittest.TestCase):
                           histogram_sum: Union[int, float] = 0,
                           histogram_min: Union[int, float] = 0,
                           histogram_max: Union[int, float] = 0,
-                          aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA) -> Histogram:
+                          aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA,
+                          attributes:dict = None) -> Histogram:
+        if not attributes:
+            attributes = self._attributes
         return Histogram(
             data_points=[
                 HistogramDataPoint(
-                    attributes=self._attributes,
+                    attributes=attributes,
                     bucket_counts=bucket_counts,
                     explicit_bounds=explicit_bounds,
                     count=sum(bucket_counts),
@@ -692,6 +724,20 @@ class TestExporter(unittest.TestCase):
             r.status_code = 200
             r._content = str.encode('{}')
         return r
+
+
+def _create_gauge_outside(self, value: int, attributes: dict = None) -> Gauge:
+    if not attributes:
+        attributes = self._attributes
+    return Gauge(
+        data_points=[
+            NumberDataPoint(
+                start_time_unix_nano=self._test_timestamp_nanos,
+                time_unix_nano=self._test_timestamp_nanos,
+                value=value,
+                attributes=attributes
+            )
+        ])
 
 
 if __name__ == '__main__':
