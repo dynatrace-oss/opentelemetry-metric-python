@@ -170,6 +170,6 @@ class _OTelDynatraceMetricsFactory:
             return True
 
         self.__logger.warning(
-            "Skipping unsupported dimension with value type %s",
-            type(value))
+            "Skipping unsupported dimension with value type '%s'",
+            type(value).__name__)
         return False
