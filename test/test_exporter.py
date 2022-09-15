@@ -169,7 +169,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="{0}.my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {1}"
-            .format(prefix, self._test_timestamp_millis),
+                .format(prefix, self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -193,7 +193,7 @@ class TestExporter(unittest.TestCase):
     @patch('dynatrace.metric.utils._dynatrace_metadata_enricher'
            '.DynatraceMetadataEnricher._get_metadata_file_content')
     def test_dynatrace_metadata_enrichment_with_default_attributes(
-        self, mock_enricher, mock_post):
+            self, mock_enricher, mock_post):
         mock_post.return_value = self._get_session_response()
 
         # attributes coming from the Dynatrace metadata enricher
@@ -332,7 +332,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry count,delta=10 {0}"
-            .format(self._test_timestamp_millis),
+                .format(self._test_timestamp_millis),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -377,7 +377,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}"
-            .format(str(int(self._test_timestamp_nanos / 1000000))),
+                .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -392,7 +392,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,10 {0}"
-            .format(str(int(self._test_timestamp_nanos / 1000000))),
+                .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -414,7 +414,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=-3,max=12,sum=87,count=12 {0}"
-            .format(str(int(self._test_timestamp_nanos / 1000000))),
+                .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -452,7 +452,7 @@ class TestExporter(unittest.TestCase):
         mock_post.assert_called_once_with(
             self._ingest_endpoint,
             data="my.instr,l1=v1,l2=v2,dt.metrics.source=opentelemetry gauge,min=0,max=10,sum=87,count=12 {0}"
-            .format(str(int(self._test_timestamp_nanos / 1000000))),
+                .format(str(int(self._test_timestamp_nanos / 1000000))),
             headers=self._headers)
 
     @patch.object(requests.Session, 'post')
@@ -646,7 +646,7 @@ class TestExporter(unittest.TestCase):
                 )
             ])
 
-    def _create_gauge(self, value: int, attributes: dict = None):
+    def _create_gauge(self, value: int, attributes: dict = None) -> Gauge:
         if not attributes:
             attributes = self._attributes
         return Gauge(
