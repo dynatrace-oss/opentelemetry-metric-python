@@ -162,9 +162,9 @@ class _OTelDynatraceMetricsFactory:
             return attributes
 
         return dict(
-            filter(lambda attr: \
-                       self._is_valid_dimension_key_type(attr[0]) and
-                       self._is_valid_dimension_value_type(attr[1]),
+            filter(lambda attr:
+                   self._is_valid_dimension_key_type(attr[0])
+                   and self._is_valid_dimension_value_type(attr[1]),
                    attributes.items()))
 
     def _is_valid_dimension_value_type(self, value) -> bool:
@@ -184,4 +184,3 @@ class _OTelDynatraceMetricsFactory:
             "Skipping unsupported dimension key value type '%s'",
             type(key).__name__)
         return False
-
