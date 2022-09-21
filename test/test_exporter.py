@@ -571,6 +571,114 @@ class TestExporter(unittest.TestCase):
                 self.assertIsInstance(kwargs.get("exporter"),
                                       _DynatraceMetricsExporter)
 
+    @parameterized.expand([
+        ("int gauge", "gauge,20"),
+        ("float gauge", "gauge,1.23"),
+        ("non-monotonic cumulative int sum", "gauge,10"),
+        ("non-monotonic cumulative float sum", "gauge,1.23"),
+        ("monotonic delta int sum", "count,delta=10"),
+        ("monotonic delta float sum", "count,delta=1.23"),
+        ("histogram", "gauge,min=-3,max=12,sum=87,count=12"),
+    ])
+    @patch.object(requests.Session, 'post')
+    def test_invalid_attribute_value(self, instrument_type, expected,
+                                     mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        attributes = {
+            "string": "value",
+            "bool": True,
+            "int": 1,
+            "float": 2.3,
+            "string_array": ["a", "b", "c"],
+            "bool_array": [True, False, True],
+            "int_array": [1, 2, 3],
+            "float_array": [1.2, 2.3, 3.4],
+            "dict": {"a": "b"},
+        }
+
+        self._assert_lines_created_correctly(instrument_type, attributes,
+                                             expected, mock_post)
+
+    @parameterized.expand([
+        ("int gauge", "gauge,20"),
+        ("float gauge", "gauge,1.23"),
+        ("non-monotonic cumulative int sum", "gauge,10"),
+        ("non-monotonic cumulative float sum", "gauge,1.23"),
+        ("monotonic delta int sum", "count,delta=10"),
+        ("monotonic delta float sum", "count,delta=1.23"),
+        ("histogram", "gauge,min=-3,max=12,sum=87,count=12"),
+    ])
+    @patch.object(requests.Session, 'post')
+    def test_invalid_attribute_keys(self, instrument_type, expected,
+                                    mock_post):
+        mock_post.return_value = self._get_session_response()
+
+        attributes = {
+            "string": "value",
+            True: "bool",
+            1: "int",
+            3.2: "float",
+        }
+
+        self._assert_lines_created_correctly(instrument_type, attributes,
+                                             expected, mock_post)
+
+    def _assert_lines_created_correctly(self, instrument_type, attributes,
+                                        expected, mock_post):
+        expected = \
+            "my.instr,string=value,dt.metrics.source=opentelemetry {0} {1}" \
+                .format(expected, int(self._test_timestamp_millis))
+
+        data = [self._get_data_for_type(instrument_type, attributes)]
+
+        exporter = _DynatraceMetricsExporter()
+        result = exporter.export(self._metrics_data_from_data(data))
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            self._ingest_endpoint,
+            data=expected,
+            headers=self._headers)
+
+    def _get_data_for_type(self, instrument_type, attributes):
+        if instrument_type == "int gauge":
+            return self._create_gauge(value=20, attributes=attributes)
+        elif instrument_type == "float gauge":
+            return self._create_gauge(value=1.23, attributes=attributes)
+        elif instrument_type == "non-monotonic cumulative int sum":
+            return self._create_sum(
+                value=10,
+                attributes=attributes,
+                monotonic=False,
+                aggregation_temporality=AggregationTemporality.CUMULATIVE)
+        elif instrument_type == "non-monotonic cumulative float sum":
+            return self._create_sum(
+                value=1.23,
+                attributes=attributes,
+                monotonic=False,
+                aggregation_temporality=AggregationTemporality.CUMULATIVE)
+        elif instrument_type == "monotonic delta int sum":
+            return self._create_sum(
+                value=10,
+                attributes=attributes,
+                monotonic=True,
+                aggregation_temporality=AggregationTemporality.DELTA)
+        elif instrument_type == "monotonic delta float sum":
+            return self._create_sum(
+                value=1.23,
+                attributes=attributes,
+                monotonic=True,
+                aggregation_temporality=AggregationTemporality.DELTA)
+        elif instrument_type == "histogram":
+            return self._create_histogram(
+                bucket_counts=[1, 2, 4, 5],
+                explicit_bounds=[0, 5, 10],
+                histogram_sum=87,
+                histogram_min=-3,
+                histogram_max=12,
+                attributes=attributes
+            )
+
     def _metrics_data_from_metrics(self,
                                    metrics: Sequence[Metric]) -> MetricsData:
         return MetricsData(resource_metrics=[
@@ -601,8 +709,12 @@ class TestExporter(unittest.TestCase):
             data=data
         )
 
-    def _create_sum(self, value: int, monotonic=True,
-                    aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA) -> Sum:
+    def _create_sum(self, value: Union[int, float], monotonic=True,
+                    aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA,
+                    attributes: dict = None) -> Sum:
+        if not attributes:
+            attributes = self._attributes
+
         return Sum(
             is_monotonic=monotonic,
             aggregation_temporality=aggregation_temporality,
@@ -611,18 +723,21 @@ class TestExporter(unittest.TestCase):
                     start_time_unix_nano=self._test_timestamp_nanos,
                     time_unix_nano=self._test_timestamp_nanos,
                     value=value,
-                    attributes=self._attributes
+                    attributes=attributes
                 )
             ])
 
-    def _create_gauge(self, value: int) -> Gauge:
+    def _create_gauge(self, value: Union[int, float],
+                      attributes: dict = None) -> Gauge:
+        if not attributes:
+            attributes = self._attributes
         return Gauge(
             data_points=[
                 NumberDataPoint(
                     start_time_unix_nano=self._test_timestamp_nanos,
                     time_unix_nano=self._test_timestamp_nanos,
                     value=value,
-                    attributes=self._attributes
+                    attributes=attributes
                 )
             ])
 
@@ -632,11 +747,14 @@ class TestExporter(unittest.TestCase):
                           histogram_sum: Union[int, float] = 0,
                           histogram_min: Union[int, float] = 0,
                           histogram_max: Union[int, float] = 0,
-                          aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA) -> Histogram:
+                          aggregation_temporality: AggregationTemporality = AggregationTemporality.DELTA,
+                          attributes: dict = None) -> Histogram:
+        if not attributes:
+            attributes = self._attributes
         return Histogram(
             data_points=[
                 HistogramDataPoint(
-                    attributes=self._attributes,
+                    attributes=attributes,
                     bucket_counts=bucket_counts,
                     explicit_bounds=explicit_bounds,
                     count=sum(bucket_counts),

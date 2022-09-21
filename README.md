@@ -125,6 +125,19 @@ Just [`tox`](https://pypi.org/project/tox/).
 
 ## Limitations
 
+### Typed attributes support
+
+The OpenTelemetry Metrics API for Python supports the concept
+of [Attributes]( https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/common.md#attributes).
+These attributes consist of key-value pairs, where the keys are strings and the
+values are either primitive types or arrays of uniform primitive types.
+
+At the moment, this exporter **only supports attributes with string key and
+value type**.
+This means that if attributes of any other type are used, they will be 
+**ignored** and **only** the string-valued attributes are going to be sent to
+Dynatrace.
+
 ### Histogram
 
 OpenTelemetry Histograms are exported to Dynatrace as statistical summaries
