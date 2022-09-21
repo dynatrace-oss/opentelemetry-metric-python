@@ -127,7 +127,7 @@ Just [`tox`](https://pypi.org/project/tox/).
 
 ### Typed attributes support
 
-The OpenTelemetry Metrics API for Java supports the concept
+The OpenTelemetry Metrics API for Python supports the concept
 of [Attributes]( https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/common.md#attributes).
 These attributes consist of key-value pairs, where the keys are strings and the
 values are either primitive types or arrays of uniform primitive types.
