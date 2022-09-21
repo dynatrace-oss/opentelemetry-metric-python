@@ -581,7 +581,8 @@ class TestExporter(unittest.TestCase):
         ("histogram", "gauge,min=-3,max=12,sum=87,count=12"),
     ])
     @patch.object(requests.Session, 'post')
-    def test_invalid_attribute_value(self, name, expected, mock_post):
+    def test_invalid_attribute_value(self, instrument_type, expected,
+                                     mock_post):
         mock_post.return_value = self._get_session_response()
 
         attributes = {
@@ -595,53 +596,9 @@ class TestExporter(unittest.TestCase):
             "float_array": [1.2, 2.3, 3.4],
             "dict": {"a": "b"},
         }
-        data = []
-        expected = "my.instr,string=value,dt.metrics.source=opentelemetry {0} {1}".format(
-            expected, int(self._test_timestamp_millis))
-        if name == "int gauge":
-            data.append(
-                self._create_gauge(value=20, attributes=attributes))
-        elif name == "float gauge":
-            data.append(
-                self._create_gauge(value=1.23, attributes=attributes))
-        elif name == "non-monotonic cumulative int sum":
-            data.append(
-                self._create_sum(value=10, attributes=attributes,
-                                 monotonic=False,
-                                 aggregation_temporality=AggregationTemporality.CUMULATIVE))
-        elif name == "non-monotonic cumulative float sum":
-            data.append(
-                self._create_sum(value=1.23, attributes=attributes,
-                                 monotonic=False,
-                                 aggregation_temporality=AggregationTemporality.CUMULATIVE))
-        elif name == "monotonic delta int sum":
-            data.append(
-                self._create_sum(value=10, attributes=attributes,
-                                 monotonic=True,
-                                 aggregation_temporality=AggregationTemporality.DELTA))
-        elif name == "monotonic delta float sum":
-            data.append(
-                self._create_sum(value=1.23, attributes=attributes,
-                                 monotonic=True,
-                                 aggregation_temporality=AggregationTemporality.DELTA))
-        elif name == "histogram":
-            data.append(self._create_histogram(
-                bucket_counts=[1, 2, 4, 5],
-                explicit_bounds=[0, 5, 10],
-                histogram_sum=87,
-                histogram_min=-3,
-                histogram_max=12,
-                attributes=attributes
-            ))
 
-        exporter = _DynatraceMetricsExporter()
-        result = exporter.export(self._metrics_data_from_data(data))
-
-        self.assertEqual(MetricExportResult.SUCCESS, result)
-        mock_post.assert_called_once_with(
-            self._ingest_endpoint,
-            data=expected,
-            headers=self._headers)
+        self._assert_lines_created_correctly(mock_post, instrument_type,
+                                             attributes, expected)
 
     @parameterized.expand([
         ("int gauge", "gauge,20"),
@@ -653,7 +610,8 @@ class TestExporter(unittest.TestCase):
         ("histogram", "gauge,min=-3,max=12,sum=87,count=12"),
     ])
     @patch.object(requests.Session, 'post')
-    def test_invalid_attribute_keys(self, name, expected, mock_post):
+    def test_invalid_attribute_keys(self, instrument_type, expected,
+                                    mock_post):
         mock_post.return_value = self._get_session_response()
 
         attributes = {
@@ -663,53 +621,64 @@ class TestExporter(unittest.TestCase):
             3.2: "float",
         }
 
-        data = []
-        expected = "my.instr,string=value,dt.metrics.source=opentelemetry {0} {1}".format(
-            expected, int(self._test_timestamp_millis))
-        if name == "int gauge":
-            data.append(
-                self._create_gauge(value=20, attributes=attributes))
-        elif name == "float gauge":
-            data.append(
-                self._create_gauge(value=1.23, attributes=attributes))
-        elif name == "non-monotonic cumulative int sum":
-            data.append(
-                self._create_sum(value=10, attributes=attributes,
-                                 monotonic=False,
-                                 aggregation_temporality=AggregationTemporality.CUMULATIVE))
-        elif name == "non-monotonic cumulative float sum":
-            data.append(
-                self._create_sum(value=1.23, attributes=attributes,
-                                 monotonic=False,
-                                 aggregation_temporality=AggregationTemporality.CUMULATIVE))
-        elif name == "monotonic delta int sum":
-            data.append(
-                self._create_sum(value=10, attributes=attributes,
-                                 monotonic=True,
-                                 aggregation_temporality=AggregationTemporality.DELTA))
-        elif name == "monotonic delta float sum":
-            data.append(
-                self._create_sum(value=1.23, attributes=attributes,
-                                 monotonic=True,
-                                 aggregation_temporality=AggregationTemporality.DELTA))
-        elif name == "histogram":
-            data.append(self._create_histogram(
+        self._assert_lines_created_correctly(mock_post, instrument_type,
+                                             attributes,
+                                             expected)
+
+    def _assert_lines_created_correctly(self, mock_post, instrument_type,
+                                        attributes, expected):
+        expected = \
+            "my.instr,string=value,dt.metrics.source=opentelemetry {0} {1}" \
+                .format(expected, int(self._test_timestamp_millis))
+
+        data = [self._get_data_for_type(instrument_type, attributes)]
+
+        exporter = _DynatraceMetricsExporter()
+        result = exporter.export(self._metrics_data_from_data(data))
+        self.assertEqual(MetricExportResult.SUCCESS, result)
+        mock_post.assert_called_once_with(
+            self._ingest_endpoint,
+            data=expected,
+            headers=self._headers)
+
+    def _get_data_for_type(self, instrument_type, attributes):
+        if instrument_type == "int gauge":
+            return self._create_gauge(value=20, attributes=attributes)
+        elif instrument_type == "float gauge":
+            return self._create_gauge(value=1.23, attributes=attributes)
+        elif instrument_type == "non-monotonic cumulative int sum":
+            return self._create_sum(
+                value=10,
+                attributes=attributes,
+                monotonic=False,
+                aggregation_temporality=AggregationTemporality.CUMULATIVE)
+        elif instrument_type == "non-monotonic cumulative float sum":
+            return self._create_sum(
+                value=1.23,
+                attributes=attributes,
+                monotonic=False,
+                aggregation_temporality=AggregationTemporality.CUMULATIVE)
+        elif instrument_type == "monotonic delta int sum":
+            return self._create_sum(
+                value=10,
+                attributes=attributes,
+                monotonic=True,
+                aggregation_temporality=AggregationTemporality.DELTA)
+        elif instrument_type == "monotonic delta float sum":
+            return self._create_sum(
+                value=1.23,
+                attributes=attributes,
+                monotonic=True,
+                aggregation_temporality=AggregationTemporality.DELTA)
+        elif instrument_type == "histogram":
+            return self._create_histogram(
                 bucket_counts=[1, 2, 4, 5],
                 explicit_bounds=[0, 5, 10],
                 histogram_sum=87,
                 histogram_min=-3,
                 histogram_max=12,
                 attributes=attributes
-            ))
-
-        exporter = _DynatraceMetricsExporter()
-        result = exporter.export(self._metrics_data_from_data(data))
-
-        self.assertEqual(MetricExportResult.SUCCESS, result)
-        mock_post.assert_called_once_with(
-            self._ingest_endpoint,
-            data=expected,
-            headers=self._headers)
+            )
 
     def _metrics_data_from_metrics(self,
                                    metrics: Sequence[Metric]) -> MetricsData:
