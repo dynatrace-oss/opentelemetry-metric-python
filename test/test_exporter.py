@@ -597,8 +597,8 @@ class TestExporter(unittest.TestCase):
             "dict": {"a": "b"},
         }
 
-        self._assert_lines_created_correctly(mock_post, instrument_type,
-                                             attributes, expected)
+        self._assert_lines_created_correctly(instrument_type, attributes,
+                                             expected, mock_post)
 
     @parameterized.expand([
         ("int gauge", "gauge,20"),
@@ -621,12 +621,11 @@ class TestExporter(unittest.TestCase):
             3.2: "float",
         }
 
-        self._assert_lines_created_correctly(mock_post, instrument_type,
-                                             attributes,
-                                             expected)
+        self._assert_lines_created_correctly(instrument_type, attributes,
+                                             expected, mock_post)
 
-    def _assert_lines_created_correctly(self, mock_post, instrument_type,
-                                        attributes, expected):
+    def _assert_lines_created_correctly(self, instrument_type, attributes,
+                                        expected, mock_post):
         expected = \
             "my.instr,string=value,dt.metrics.source=opentelemetry {0} {1}" \
                 .format(expected, int(self._test_timestamp_millis))
