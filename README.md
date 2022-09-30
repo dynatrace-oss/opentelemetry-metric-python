@@ -39,10 +39,9 @@ meter = metrics.get_meter(__name__)
 
 # create a counter instrument and provide the first data point
 counter = meter.create_counter(
-    name="MyCounter",
+    name="my_counter",
     description="Description of MyCounter",
-    unit="1",
-    value_type=int
+    unit="1"
 )
 
 counter.add(25, {"dimension-1": "value-1"})
