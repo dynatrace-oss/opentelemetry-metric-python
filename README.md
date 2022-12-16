@@ -52,6 +52,7 @@ counter.add(25, {"dimension-1": "value-1"})
 To run the [example](example/basic_example.py), clone this repository and change to the `opentelemetry-metric-python` folder, then run:
 
 ```shell
+pip install psutil      # the example exports cpu which is retrieved using psutil, this is not required by the exporter.
 pip install .           # install the Dynatrace exporter
 export LOGLEVEL=DEBUG   # (optional) Set the log level to debug to see more output (default is INFO)
 python example/basic_example.py
@@ -112,7 +113,7 @@ Default dimensions are overwritten by attributes passed to instruments, which in
 
 ### Requirements
 
-Just [`tox`](https://pypi.org/project/tox/).
+Just [`tox`](https://pypi.org/project/tox/). Make sure to `pip install` the `requirements-dev.txt` to get the relevant packages. 
 
 ### Running tests and lint
 
