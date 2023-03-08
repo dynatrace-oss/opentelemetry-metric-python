@@ -20,9 +20,14 @@ pip install opentelemetry-exporter-dynatrace-metrics
 
 ### Usage
 
-The general setup of OpenTelemetry Python is explained in the official [Getting Started Guide](https://open-telemetry.github.io/opentelemetry-python/getting-started.html#add-metrics).
-
 ```python
+from opentelemetry import metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from dynatrace.opentelemetry.metrics.export import (
+    configure_dynatrace_metrics_export
+)
+
+
 # setup metrics export pipeline
 metrics.set_meter_provider(MeterProvider(
     # configure Exporter/MetricReader combination with a 5000ms export
@@ -54,6 +59,7 @@ To run the [example](example/basic_example.py), clone this repository and change
 ```shell
 pip install psutil      # the example exports cpu which is retrieved using psutil, this is not required by the exporter.
 pip install .           # install the Dynatrace exporter
+pip install psutil      # install package is used by the example to read CPU/Memory usage
 export LOGLEVEL=DEBUG   # (optional) Set the log level to debug to see more output (default is INFO)
 python example/basic_example.py
 ```
