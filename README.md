@@ -1,4 +1,24 @@
-# Dynatrace OpenTelemetry Metrics Exporter for Python
+# Dynatrace
+
+[Dynatrace](https://www.dynatrace.com/integrations/opentelemetry) supports native
+OpenTelemetry protocol (OTLP) ingest for traces, metrics and logs.
+All signals can be sent directly to Dynatrace via **OTLP protobuf over HTTP**
+using the built-in OTLP/HTTP Exporter available in the OpenTelemetry Python SDK.
+More information on configuring your Python applications to use the OTLP exporter can be found in the
+[Dynatrace documentation](https://www.dynatrace.com/support/help/shortlink/otel-wt-python).
+
+## Dynatrace OpenTelemetry Metrics Exporter for Python
+![Static Badge](https://img.shields.io/badge/status-deprecated-orange)
+
+> **Warning**
+> Dynatrace supports native OpenTelemetry protocol (OTLP) ingest for traces, metrics and logs.
+> Therefore, the proprietary Dynatrace OpenTelemetry metrics exporter is deprecated in favor of exporting via OTLP/HTTP.
+>
+> The exporter is still available but after the end of 2023, no support, updates, or compatibility with newer OTel versions will be provided.
+>
+> Please refer to the [migration guide](https://www.dynatrace.com/support/help/shortlink/migrating-dynatrace-metrics-exporter-otlp-exporter#migrate-applications) for instructions on how to migrate to the OTLP HTTP exporter, as well as reasoning and benefits for this transition.
+>
+> For an example on how to configure the OTLP exporter in a Python application, check out the [Python integration walk-through](https://www.dynatrace.com/support/help/shortlink/otel-wt-python) page in the Dynatrace documentation.
 
 This exporter allows exporting metrics created using the [OpenTelemetry SDK for Python](https://github.com/open-telemetry/opentelemetry-python)
 directly to [Dynatrace](https://www.dynatrace.com).
@@ -8,9 +28,9 @@ directly to [Dynatrace](https://www.dynatrace.com).
 More information on exporting OpenTelemetry metrics to Dynatrace can be found in the
 [Dynatrace documentation](https://www.dynatrace.com/support/help/shortlink/opentelemetry-metrics).
 
-## Getting started
+### Getting started
 
-### Installation
+#### Installation
 
 To install the [latest version from PyPI](https://pypi.org/project/opentelemetry-exporter-dynatrace-metrics/) run:
 
@@ -18,7 +38,7 @@ To install the [latest version from PyPI](https://pypi.org/project/opentelemetry
 pip install opentelemetry-exporter-dynatrace-metrics
 ```
 
-### Usage
+#### Usage
 
 ```python
 from opentelemetry import metrics
@@ -52,7 +72,7 @@ counter = meter.create_counter(
 counter.add(25, {"dimension-1": "value-1"})
 ```
 
-### Example
+#### Example
 
 To run the [example](example/basic_example.py), clone this repository and change to the `opentelemetry-metric-python` folder, then run:
 
@@ -70,11 +90,11 @@ This script will install Python, set up a virtual environment, pull in all the r
 
 The example also offers a simple CLI. Run `python example/basic_example.py -h` to get more information.
 
-### Configuration
+#### Configuration
 
 The exporter allows for configuring the following settings by passing them to the constructor:
 
-#### Dynatrace API Endpoint
+##### Dynatrace API Endpoint
 
 The endpoint to which the metrics are sent is specified using the `endpoint_url` parameter.
 
@@ -86,23 +106,23 @@ Using the local API endpoint, the host ID and host name context are automaticall
 The default metric API endpoint exposed by the OneAgent is `http://localhost:14499/metrics/ingest`.
 If no endpoint is set and a OneAgent is running on the host, metrics will be exported to it automatically using the OneAgent with no endpoint or API token configuration required.
 
-#### Dynatrace API Token
+##### Dynatrace API Token
 
 The Dynatrace API token to be used by the exporter is specified using the `api_token` parameter and could, for example, be read from an environment variable.
 
 Creating an API token for your Dynatrace environment is described in the [Dynatrace API documentation](https://www.dynatrace.com/support/help/dynatrace-api/basics/dynatrace-api-authentication/).
 The permission required for sending metrics is `Ingest metrics` (`metrics.ingest`) and it is recommended to limit scope to only this permission.
 
-#### Metric Key Prefix
+##### Metric Key Prefix
 
 The `prefix` parameter specifies an optional prefix, which is prepended to each metric key, separated by a dot (`<prefix>.<name>`).
 
-#### Default Dimensions
+##### Default Dimensions
 
 The `default_dimensions` parameter can be used to optionally specify a list of key/value pairs, which will be added as additional dimensions to all data points.
 Dimension keys are unique, and labels on instruments will overwrite the default dimensions if key collisions appear.
 
-#### Export Dynatrace Metadata
+##### Export Dynatrace Metadata
 
 If running on a host with a running OneAgent, setting the `export_dynatrace_metadata` option to `True` will export metadata collected by the OneAgent to the Dynatrace endpoint.
 If no Dynatrace API endpoint is set, the default exporter endpoint will be the OneAgent endpoint, and this option will be set automatically.
@@ -110,18 +130,18 @@ Therefore, if no endpoint is specified, a OneAgent is assumed to be running and 
 More information on the underlying Dynatrace metadata feature that is used by the exporter can be found in the
 [Dynatrace documentation](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/ingestion-methods/enrich-metrics/).
 
-##### Dimensions precedence
+###### Dimensions precedence
 
 When specifying default dimensions, attributes and Dynatrace metadata enrichment, the precedence of dimensions with the same key is as follows:
 Default dimensions are overwritten by attributes passed to instruments, which in turn are overwritten by the Dynatrace metadata dimensions (even though the likeliness of a collision here is very low, since the Dynatrace metadata only contains [Dynatrace reserved dimensions](https://www.dynatrace.com/support/help/how-to-use-dynatrace/metrics/metric-ingestion/metric-ingestion-protocol/#syntax) starting with `dt.*`).
 
-## Development
+### Development
 
-### Requirements
+#### Requirements
 
 Just [`tox`](https://pypi.org/project/tox/). Make sure to `pip install` the `requirements-dev.txt` to get the relevant packages. 
 
-### Running tests and lint
+#### Running tests and lint
 
 * Test all supported python versions: `tox`
 * Test all supported python versions in parallel: `tox -p`
@@ -129,9 +149,9 @@ Just [`tox`](https://pypi.org/project/tox/). Make sure to `pip install` the `req
 * Current python version: `tox -e py`
 * Lint: `tox -e lint`
 
-## Limitations
+### Limitations
 
-### Typed attributes support
+#### Typed attributes support
 
 The OpenTelemetry Metrics API for Python supports the concept
 of [Attributes]( https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/common.md#attributes).
@@ -144,7 +164,7 @@ This means that if attributes of any other type are used, they will be
 **ignored** and **only** the string-valued attributes are going to be sent to
 Dynatrace.
 
-### Histogram
+#### Histogram
 
 OpenTelemetry Histograms are exported to Dynatrace as statistical summaries
 consisting of a minimum and maximum value, the total sum of all values, and the
